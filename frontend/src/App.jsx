@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { getFlights, getSummary, getTrajectory } from "./services/api"
 import FlightMap from "./components/FlightMap"
 import TrajectoryCharts from "./components/TrajectoryCharts"
-
+import FlightComparison from "./components/FlightComparison"
 
 function toMs(timestamp) {
   if (!timestamp) return null
@@ -323,6 +323,25 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           </div>
 
           <TrajectoryCharts trajectory={selectedTrajectory} />
+        </section>
+        <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Flight Comparison</h2>
+              <p className="text-sm text-slate-400">
+                Compare arrival efficiency, level-offs, distance, fuel proxy, and CO₂ proxy.
+              </p>
+            </div>
+            <p className="text-sm text-slate-400">
+              Dataset size: {flights.length} flights
+            </p>
+          </div>
+
+          <FlightComparison
+            flights={flights}
+            selectedFlightId={selectedFlightId}
+            onSelectFlight={setSelectedFlightId}
+          />
         </section>
       </main>
     </PageShell>
