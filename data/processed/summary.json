@@ -1,0 +1,24 @@
+{
+  "n_flights": 10,
+  "total_points": 5341,
+  "runways": [
+    "19L",
+    "19R",
+    "26"
+  ],
+  "aircraft_types": [
+    "A319",
+    "A320",
+    "B736",
+    "B737",
+    "B738",
+    "F50",
+    "SF34"
+  ],
+  "descent_classes": [
+    "Interrupted descent",
+    "Partial CDO"
+  ],
+  "total_estimated_fuel_kg_proxy": 8268.8,
+  "total_estimated_co2_kg_proxy": 26129.5
+}
