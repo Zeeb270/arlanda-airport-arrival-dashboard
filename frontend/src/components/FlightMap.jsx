@@ -1,6 +1,6 @@
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet"
 import L from "leaflet"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 const ESSA_POSITION = [59.6519, 17.9186]
 
@@ -45,6 +45,17 @@ function createAircraftIcon(color, isSelected) {
   })
 }
 
+function toMs(timestamp) {
+  if (!timestamp) return null
+  const value = new Date(timestamp).getTime()
+  return Number.isNaN(value) ? null : value
+}
+
+function formatTime(ms) {
+  if (!ms) return "N/A"
+  return new Date(ms).toISOString().replace("T", " ").slice(0, 19) + " UTC"
+}
+
 function FitBounds({ allPositions }) {
   const map = useMap()
 
@@ -72,14 +83,57 @@ function validPositions(trajectory) {
     .map((point) => [point.lat, point.lon])
 }
 
-function lastValidPoint(trajectory) {
-  if (!trajectory || trajectory.length === 0) return null
+function getTrajectoryTimeRange(trajectory) {
+  if (!trajectory || trajectory.length === 0) return [null, null]
 
-  const validPoints = trajectory.filter((point) => point.lat !== null && point.lon !== null)
-  return validPoints.length > 0 ? validPoints[validPoints.length - 1] : null
+  const times = trajectory
+    .map((point) => toMs(point.timestamp))
+    .filter((value) => value !== null)
+
+  if (times.length === 0) return [null, null]
+
+  return [Math.min(...times), Math.max(...times)]
+}
+
+function getPointAtTime(trajectory, currentTimeMs) {
+  if (!trajectory || trajectory.length === 0 || currentTimeMs === null) {
+    return null
+  }
+
+  const validPoints = trajectory
+    .filter((point) => point.lat !== null && point.lon !== null && point.timestamp)
+    .map((point) => ({
+      ...point,
+      timeMs: toMs(point.timestamp),
+    }))
+    .filter((point) => point.timeMs !== null)
+    .sort((a, b) => a.timeMs - b.timeMs)
+
+  if (validPoints.length === 0) return null
+
+  if (currentTimeMs < validPoints[0].timeMs || currentTimeMs > validPoints[validPoints.length - 1].timeMs) {
+    return null
+  }
+
+  let closestPoint = validPoints[0]
+  let smallestDiff = Math.abs(currentTimeMs - closestPoint.timeMs)
+
+  for (const point of validPoints) {
+    const diff = Math.abs(currentTimeMs - point.timeMs)
+
+    if (diff < smallestDiff) {
+      closestPoint = point
+      smallestDiff = diff
+    }
+  }
+
+  return closestPoint
 }
 
 function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTimeMs, setCurrentTimeMs] = useState(null)
+
   const visibleFlightRecords = useMemo(() => {
     return flights.filter((flight) => visibleTrajectories[flight.flight_id])
   }, [flights, visibleTrajectories])
@@ -90,59 +144,177 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
     )
   }, [visibleFlightRecords, visibleTrajectories])
 
+  const timeRange = useMemo(() => {
+    const ranges = visibleFlightRecords
+      .map((flight) => getTrajectoryTimeRange(visibleTrajectories[flight.flight_id]))
+      .filter(([start, end]) => start !== null && end !== null)
+
+    if (ranges.length === 0) {
+      return [null, null]
+    }
+
+    return [
+      Math.min(...ranges.map(([start]) => start)),
+      Math.max(...ranges.map(([, end]) => end)),
+    ]
+  }, [visibleFlightRecords, visibleTrajectories])
+
+  const [minTimeMs, maxTimeMs] = timeRange
+
+  useEffect(() => {
+    if (minTimeMs !== null) {
+      setCurrentTimeMs(minTimeMs)
+      setIsPlaying(false)
+    }
+  }, [minTimeMs, maxTimeMs])
+
+  useEffect(() => {
+    if (!isPlaying || currentTimeMs === null || minTimeMs === null || maxTimeMs === null) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setCurrentTimeMs((previous) => {
+        if (previous === null) return minTimeMs
+
+        const next = previous + 30 * 1000
+
+        if (next >= maxTimeMs) {
+          return minTimeMs
+        }
+
+        return next
+      })
+    }, 600)
+
+    return () => window.clearInterval(interval)
+  }, [isPlaying, currentTimeMs, minTimeMs, maxTimeMs])
+
+  const activeAircraft = useMemo(() => {
+    if (currentTimeMs === null) return []
+
+    return visibleFlightRecords
+      .map((flight, index) => {
+        const trajectory = visibleTrajectories[flight.flight_id]
+        const point = getPointAtTime(trajectory, currentTimeMs)
+
+        if (!point) return null
+
+        const isSelected = flight.flight_id === selectedFlight?.flight_id
+        const color = isSelected ? "#22d3ee" : COLORS[index % COLORS.length]
+
+        return {
+          flight,
+          point,
+          color,
+          isSelected,
+        }
+      })
+      .filter(Boolean)
+  }, [currentTimeMs, selectedFlight, visibleFlightRecords, visibleTrajectories])
+
+  const sliderDisabled = minTimeMs === null || maxTimeMs === null || minTimeMs === maxTimeMs
+
   return (
     <div className="relative h-[520px] overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-      <div className="absolute left-3 top-3 z-[1000] max-h-[250px] w-[280px] overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-lg">
+      <div className="absolute left-3 top-3 z-[1000] max-h-[250px] w-[300px] overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-lg">
         <div className="mb-2 flex items-center justify-between">
-            <span>
-                <span className="text-cyan-300">{visibleFlightRecords.length}</span>{" "}
-                time-matching flight{visibleFlightRecords.length === 1 ? "" : "s"}
-            </span>
-            <span className="text-slate-500">shown</span>
+          <span>
+            <span className="text-cyan-300">{visibleFlightRecords.length}</span>{" "}
+            time-matching flight{visibleFlightRecords.length === 1 ? "" : "s"}
+          </span>
+          <span className="text-slate-500">
+            {activeAircraft.length} active
+          </span>
         </div>
 
         <div className="space-y-2">
-            {visibleFlightRecords.map((flight, index) => {
-                const isSelected = flight.flight_id === selectedFlight?.flight_id
-                const color = isSelected ? "#22d3ee" : COLORS[index % COLORS.length]
+          {visibleFlightRecords.map((flight, index) => {
+            const isSelected = flight.flight_id === selectedFlight?.flight_id
+            const color = isSelected ? "#22d3ee" : COLORS[index % COLORS.length]
+            const trajectory = visibleTrajectories[flight.flight_id]
+            const [start, end] = getTrajectoryTimeRange(trajectory)
+            const isActive =
+              currentTimeMs !== null &&
+              start !== null &&
+              end !== null &&
+              currentTimeMs >= start &&
+              currentTimeMs <= end
 
-                return (
-                    <div
-                        key={flight.flight_id}
-                        className={`rounded-lg border px-2 py-2 ${
-                            isSelected
-                                ? "border-cyan-400 bg-cyan-500/10"
-                                : "border-slate-800 bg-slate-900/80"
-                            }`}
-                        >
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className="h-2.5 w-2.5 rounded-full"
-                                        style={{ backgroundColor: color }}
-                                    />
-                                    <span className="font-medium text-slate-100">
-                                        {flight.callsign || flight.flight_id}
-                                    </span>
-                                </div>
+            return (
+              <div
+                key={flight.flight_id}
+                className={`rounded-lg border px-2 py-2 ${
+                  isSelected
+                    ? "border-cyan-400 bg-cyan-500/10"
+                    : "border-slate-800 bg-slate-900/80"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="font-medium text-slate-100">
+                      {flight.callsign || flight.flight_id}
+                    </span>
+                  </div>
 
-                                {isSelected && (
-                                    <span className="rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] text-cyan-300">
-                                        selected
-                                    </span>
-                                )}
-                            </div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] ${
+                      isActive
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : "bg-slate-800 text-slate-500"
+                    }`}
+                  >
+                    {isActive ? "active" : "inactive"}
+                  </span>
+                </div>
 
-                            <div className="mt-1 grid grid-cols-3 gap-1 text-[10px] text-slate-400">
-                                <span>{flight.aircraft_type || "N/A"}</span>
-                                <span>RWY {flight.arrival_runway || "N/A"}</span>
-                                <span>STAR {flight.star || "N/A"}</span>
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
+                <div className="mt-1 grid grid-cols-3 gap-1 text-[10px] text-slate-400">
+                  <span>{flight.aircraft_type || "N/A"}</span>
+                  <span>RWY {flight.arrival_runway || "N/A"}</span>
+                  <span>STAR {flight.star || "N/A"}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
+      </div>
+
+      <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded-xl border border-slate-800 bg-slate-950/95 p-3 shadow-lg">
+        <div className="mb-2 flex items-center justify-between gap-3 text-xs text-slate-300">
+          <button
+            type="button"
+            onClick={() => setIsPlaying((value) => !value)}
+            disabled={sliderDisabled}
+            className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-cyan-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500"
+          >
+            {isPlaying ? "Pause" : "Play"}
+          </button>
+
+          <span className="truncate text-slate-400">
+            Current time:{" "}
+            <span className="text-cyan-300">{formatTime(currentTimeMs)}</span>
+          </span>
+        </div>
+
+        <input
+          type="range"
+          min={minTimeMs || 0}
+          max={maxTimeMs || 0}
+          value={currentTimeMs || minTimeMs || 0}
+          disabled={sliderDisabled}
+          onChange={(event) => setCurrentTimeMs(Number(event.target.value))}
+          className="w-full accent-cyan-400"
+        />
+
+        <div className="mt-1 flex justify-between text-[10px] text-slate-500">
+          <span>{formatTime(minTimeMs)}</span>
+          <span>{formatTime(maxTimeMs)}</span>
+        </div>
+      </div>
 
       <MapContainer
         center={ESSA_POSITION}
@@ -166,50 +338,50 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
         {visibleFlightRecords.map((flight, index) => {
           const trajectory = visibleTrajectories[flight.flight_id]
           const positions = validPositions(trajectory)
-          const lastPoint = lastValidPoint(trajectory)
           const isSelected = flight.flight_id === selectedFlight?.flight_id
           const color = isSelected ? "#22d3ee" : COLORS[index % COLORS.length]
 
           return (
-            <div key={flight.flight_id}>
-              {positions.length > 1 && (
-                <Polyline
-                  positions={positions}
-                  pathOptions={{
-                    color,
-                    weight: isSelected ? 5 : 3,
-                    opacity: isSelected ? 0.95 : 0.55,
-                  }}
-                />
-              )}
-
-              {lastPoint && (
-                <Marker
-                  position={[lastPoint.lat, lastPoint.lon]}
-                  icon={createAircraftIcon(color, isSelected)}
-                >
-                  <Popup>
-                    <strong>{flight.callsign || flight.flight_id}</strong>
-                    <br />
-                    Aircraft: {flight.aircraft_type || "N/A"}
-                    <br />
-                    Runway: {flight.arrival_runway || "N/A"}
-                    <br />
-                    STAR: {flight.star || "N/A"}
-                    <br />
-                    Descent: {flight.descent_class || "N/A"}
-                    <br />
-                    Altitude:{" "}
-                    {lastPoint.altitude_ft
-                      ? Math.round(lastPoint.altitude_ft).toLocaleString()
-                      : "N/A"}{" "}
-                    ft
-                  </Popup>
-                </Marker>
-              )}
-            </div>
+            <Polyline
+              key={flight.flight_id}
+              positions={positions}
+              pathOptions={{
+                color,
+                weight: isSelected ? 5 : 3,
+                opacity: isSelected ? 0.95 : 0.45,
+              }}
+            />
           )
         })}
+
+        {activeAircraft.map(({ flight, point, color, isSelected }) => (
+          <Marker
+            key={flight.flight_id}
+            position={[point.lat, point.lon]}
+            icon={createAircraftIcon(color, isSelected)}
+          >
+            <Popup>
+              <strong>{flight.callsign || flight.flight_id}</strong>
+              <br />
+              Aircraft: {flight.aircraft_type || "N/A"}
+              <br />
+              Runway: {flight.arrival_runway || "N/A"}
+              <br />
+              STAR: {flight.star || "N/A"}
+              <br />
+              Altitude:{" "}
+              {point.altitude_ft
+                ? Math.round(point.altitude_ft).toLocaleString()
+                : "N/A"}{" "}
+              ft
+              <br />
+              Speed:{" "}
+              {point.groundspeed_kt ? Math.round(point.groundspeed_kt) : "N/A"} kt
+              <br />
+              Time: {point.timestamp}
+            </Popup>
+          </Marker>
+        ))}
 
         <FitBounds allPositions={allPositions} />
       </MapContainer>
