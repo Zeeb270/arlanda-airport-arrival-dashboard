@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { getFlights, getSummary, getTrajectory } from "./services/api"
 import FlightMap from "./components/FlightMap"
+import TrajectoryCharts from "./components/TrajectoryCharts"
+
 
 function toMs(timestamp) {
   if (!timestamp) return null
@@ -309,17 +311,18 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
         <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Trajectory Analytics</h2>
+            <div>
+              <h2 className="text-lg font-semibold">Trajectory Analytics</h2>
+              <p className="text-sm text-slate-400">
+                Altitude, speed, and vertical-rate profiles for the selected arrival.
+              </p>
+            </div>
             <p className="text-sm text-slate-400">
               Selected flight: {selectedFlight?.callsign || "None"}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Panel title="Altitude Profile" text="Chart added after trajectory API connection." />
-            <Panel title="Speed Profile" text="Groundspeed and IAS where available." />
-            <Panel title="Vertical Rate / CDO" text="Level-off and CDO logic visualization." />
-          </div>
+          <TrajectoryCharts trajectory={selectedTrajectory} />
         </section>
       </main>
     </PageShell>
