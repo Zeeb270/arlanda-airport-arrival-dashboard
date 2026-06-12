@@ -58,6 +58,25 @@ function averageFlightField(flights, field) {
   return values.reduce((total, value) => total + value, 0) / values.length
 }
 
+function countFlightsByField(flights, field, fallbackLabel = "Unknown") {
+  const counts = {}
+
+  flights.forEach((flight) => {
+    const label = flight[field] || fallbackLabel
+    counts[label] = (counts[label] || 0) + 1
+  })
+
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
+function getTopCo2Flights(flights, limit = 5) {
+  return [...flights]
+    .sort((a, b) => Number(b.final_co2_kg || 0) - Number(a.final_co2_kg || 0))
+    .slice(0, limit)
+}
+
 function flightOverlapsSelected(candidateFlight, selectedFlight, windowMinutes) {
   if (!candidateFlight || !selectedFlight) return false
 
@@ -307,6 +326,26 @@ function App() {
       (flight) => flight.environmental_method === "OpenAP"
     ).length
 
+    const descentMix = countFlightsByField(
+      scenarioFlights,
+      "descent_class",
+      "Unknown descent"
+    )
+
+    const runwayMix = countFlightsByField(
+      scenarioFlights,
+      "arrival_runway",
+      "Unknown runway"
+    )
+
+    const environmentalMethodMix = countFlightsByField(
+      scenarioFlights,
+      "environmental_method",
+      "Unknown method"
+    )
+
+    const topCo2Flights = getTopCo2Flights(scenarioFlights, 5)
+
     return {
       nFlights: scenarioFlights.length,
       totalFuel,
@@ -314,8 +353,13 @@ function App() {
       averageEfficiency,
       interruptedDescents,
       openapFlights,
+      descentMix,
+      runwayMix,
+      environmentalMethodMix,
+      topCo2Flights,
     }
   }, [scenarioFlights])
+  
 
   const selectedFlight = useMemo(() => {
     return flights.find((flight) => flight.flight_id === selectedFlightId) || null
@@ -891,7 +935,7 @@ function TrafficScenarioPanel({
             Traffic Scenario Selector
           </h2>
           <p className="text-sm text-slate-400">
-            Select a date, hour block, and runway to inspect same-day arrival traffic context.
+            Select a date, hour block, and runway to inspect arrival-flow context, descent quality, and environmental impact.
           </p>
         </div>
 
@@ -1004,9 +1048,31 @@ function TrafficScenarioPanel({
         />
       </div>
 
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <ScenarioBreakdownCard
+          title="Descent Mix"
+          subtitle="CDO-style performance inside selected scenario"
+          rows={summary.descentMix}
+        />
+
+        <ScenarioBreakdownCard
+          title="Runway Mix"
+          subtitle="Runway usage inside selected scenario"
+          rows={summary.runwayMix}
+        />
+
+        <ScenarioBreakdownCard
+          title="Environmental Method"
+          subtitle="OpenAP versus fallback proxy coverage"
+          rows={summary.environmentalMethodMix}
+        />
+
+        <ScenarioTopFlightsCard flights={summary.topCo2Flights} />
+      </div>
+
       <p className="mt-3 text-xs leading-5 text-slate-500">
         Scenario time uses approach clearance time where available, otherwise last timestamp or first timestamp.
-        This provides an operational arrival-flow view for sequencing and traffic-context analysis.
+        This provides an operational arrival-flow view for sequencing, CDO interruption, and environmental-impact analysis.
       </p>
     </section>
   )
@@ -1021,6 +1087,90 @@ function ScenarioMetric({ label, value }) {
   )
 }
 
+function ScenarioBreakdownCard({ title, subtitle, rows }) {
+  const safeRows = rows || []
+  const total = safeRows.reduce((sum, row) => sum + row.count, 0)
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+      <div className="mb-3">
+        <h3 className="font-medium text-slate-100">{title}</h3>
+        <p className="text-xs text-slate-500">{subtitle}</p>
+      </div>
+
+      {safeRows.length === 0 ? (
+        <p className="text-sm text-slate-500">No flights in this scenario.</p>
+      ) : (
+        <div className="space-y-3">
+          {safeRows.map((row) => {
+            const percent = total > 0 ? (row.count / total) * 100 : 0
+
+            return (
+              <div key={row.label}>
+                <div className="mb-1 flex justify-between gap-3 text-xs">
+                  <span className="text-slate-300">{row.label}</span>
+                  <span className="text-slate-500">
+                    {row.count} / {percent.toFixed(0)}%
+                  </span>
+                </div>
+
+                <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-cyan-400"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ScenarioTopFlightsCard({ flights }) {
+  const safeFlights = flights || []
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+      <div className="mb-3">
+        <h3 className="font-medium text-slate-100">Top CO₂ Flights</h3>
+        <p className="text-xs text-slate-500">
+          Highest final CO₂ estimates in the selected scenario
+        </p>
+      </div>
+
+      {safeFlights.length === 0 ? (
+        <p className="text-sm text-slate-500">No flights in this scenario.</p>
+      ) : (
+        <div className="space-y-2">
+          {safeFlights.map((flight, index) => (
+            <div
+              key={flight.flight_id}
+              className="rounded-lg border border-slate-800 bg-slate-900/70 p-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-100">
+                    {index + 1}. {flight.callsign || flight.flight_id}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {flight.aircraft_type || "N/A"} · RWY {flight.arrival_runway || "N/A"} · {flight.descent_class || "N/A"}
+                  </p>
+                </div>
+
+                <p className="text-right text-sm font-semibold text-cyan-300">
+                  {Math.round(Number(flight.final_co2_kg || 0)).toLocaleString()} kg
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function TopKpiCard({ label, value, subtext }) {
   return (
