@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Large raw flight data uploads
+*.zip
+data/raw/json_flights_407/
+data/raw/json_flights_10_backup/
+
+# Large raw JSON flight datasets
+data/raw/json_flights/*.json
+data/raw/json_flights_407/
+data/raw/json_flights_10_backup/
+*.zip
