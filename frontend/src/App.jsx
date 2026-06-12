@@ -225,6 +225,57 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
   return (
     <PageShell>
       <main className="grid min-h-[calc(100vh-116px)] grid-cols-12 gap-4 p-4">
+        
+
+        <section className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <TopKpiCard
+            label="Flights"
+            value={summary?.n_flights?.toLocaleString() || "0"}
+            subtext="Initial research sample"
+          />
+          <TopKpiCard
+            label="Trajectory points"
+            value={summary?.total_points?.toLocaleString() || "0"}
+            subtext="Radar/track observations"
+          />
+          <TopKpiCard
+            label="Final fuel"
+            value={`${summary?.total_final_fuel_kg?.toLocaleString() || "0"} kg`}
+            subtext="OpenAP + fallback"
+          />
+          <TopKpiCard
+            label="Final CO₂"
+            value={`${summary?.total_final_co2_kg?.toLocaleString() || "0"} kg`}
+            subtext="Estimated emissions"
+          />
+          <TopKpiCard
+            label="Model coverage"
+            value={`${summary?.openap_count || 0}/${summary?.n_flights || 0}`}
+            subtext="Flights using OpenAP"
+          />
+        </section>
+
+        <section className="col-span-12 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-medium text-amber-300">
+                Research prototype status
+              </p>
+              <p className="text-sm leading-6 text-slate-300">
+                This dashboard uses 10 real flight JSON records for proof-of-concept development.
+                It is suitable for trajectory reconstruction, visualization, CDO-style analysis,
+                and environmental-estimation workflow testing. It is not yet sufficient for
+                statistical conclusions about Stockholm Arlanda operations.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <StatusBadge text="Real trajectory data" />
+              <StatusBadge text="OpenAP estimates" />
+              <StatusBadge text="Weather context" />
+              <StatusBadge text="Prototype only" tone="amber" />
+            </div>
+          </div>
+        </section>
         <aside className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Flight Selector</h2>
@@ -564,6 +615,31 @@ function PageShell({ children }) {
 
       {children}
     </div>
+  )
+}
+
+function TopKpiCard({ label, value, subtext }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-4 shadow-lg shadow-slate-950/30">
+      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold text-cyan-300">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{subtext}</p>
+    </div>
+  )
+}
+
+function StatusBadge({ text, tone = "cyan" }) {
+  const style =
+    tone === "amber"
+      ? "border-amber-400/30 bg-amber-500/10 text-amber-300"
+      : "border-cyan-400/30 bg-cyan-500/10 text-cyan-300"
+
+  return (
+    <span className={`rounded-full border px-3 py-1 ${style}`}>
+      {text}
+    </span>
   )
 }
 
