@@ -50,6 +50,9 @@ function App() {
   const [runwayFilter, setRunwayFilter] = useState("ALL")
   const [aircraftFilter, setAircraftFilter] = useState("ALL")
   const [descentFilter, setDescentFilter] = useState("ALL")
+  const [environmentalMethodFilter, setEnvironmentalMethodFilter] = useState("ALL")
+  const [dateFilter, setDateFilter] = useState("ALL")
+  const [flightSearch, setFlightSearch] = useState("")
   const [minEfficiency, setMinEfficiency] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -147,7 +150,32 @@ function App() {
     ).sort()
   }, [flights])
 
+  const environmentalMethodOptions = useMemo(() => {
+    return Array.from(
+      new Set(flights.map((flight) => flight.environmental_method).filter(Boolean))
+    ).sort()
+  }, [flights])
+
+  const dateOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        flights
+          .map((flight) => {
+            const timestamp =
+              flight.approach_clearance_time ||
+              flight.last_timestamp ||
+              flight.first_timestamp
+
+            return timestamp ? timestamp.slice(0, 10) : null
+          })
+          .filter(Boolean)
+      )
+    ).sort()
+  }, [flights])
+
   const filteredFlights = useMemo(() => {
+    const normalizedSearch = flightSearch.trim().toLowerCase()
+
     return flights.filter((flight) => {
       const matchesRunway =
         runwayFilter === "ALL" || flight.arrival_runway === runwayFilter
@@ -158,6 +186,26 @@ function App() {
       const matchesDescent =
         descentFilter === "ALL" || flight.descent_class === descentFilter
 
+      const matchesEnvironmentalMethod =
+        environmentalMethodFilter === "ALL" ||
+        flight.environmental_method === environmentalMethodFilter
+
+      const timestamp =
+        flight.approach_clearance_time ||
+        flight.last_timestamp ||
+        flight.first_timestamp
+
+      const flightDate = timestamp ? timestamp.slice(0, 10) : null
+
+      const matchesDate =
+        dateFilter === "ALL" || flightDate === dateFilter
+
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        String(flight.callsign || "").toLowerCase().includes(normalizedSearch) ||
+        String(flight.flight_id || "").toLowerCase().includes(normalizedSearch) ||
+        String(flight.aircraft_type || "").toLowerCase().includes(normalizedSearch)
+
       const matchesEfficiency =
         Number(flight.efficiency_score || 0) >= Number(minEfficiency)
 
@@ -165,10 +213,22 @@ function App() {
         matchesRunway &&
         matchesAircraft &&
         matchesDescent &&
+        matchesEnvironmentalMethod &&
+        matchesDate &&
+        matchesSearch &&
         matchesEfficiency
       )
     })
-  }, [flights, runwayFilter, aircraftFilter, descentFilter, minEfficiency])
+  }, [
+    flights,
+    runwayFilter,
+    aircraftFilter,
+    descentFilter,
+    environmentalMethodFilter,
+    dateFilter,
+    flightSearch,
+    minEfficiency,
+  ])
 
   const selectedFlight = useMemo(() => {
     return flights.find((flight) => flight.flight_id === selectedFlightId) || null
@@ -290,11 +350,23 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Flight Selector</h2>
             <p className="text-sm text-slate-400">
-              Select and filter arrivals into Stockholm Arlanda.
+              Search, filter, and select arrivals into Stockholm Arlanda.
             </p>
           </div>
 
           <div className="mb-4 space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">
+                Search flight
+              </label>
+              <input
+                type="text"
+                value={flightSearch}
+                onChange={(event) => setFlightSearch(event.target.value)}
+                placeholder="Callsign, flight ID, aircraft..."
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+              />
+            </div>
             <div>
               <label className="mb-1 block text-xs text-slate-500">Runway</label>
               <select
@@ -342,6 +414,41 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                 ))}
               </select>
             </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">
+                Date
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(event) => setDateFilter(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ALL">All dates</option>
+                {dateOptions.map((date) => (
+                  <option key={date} value={date}>
+                    {date}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">
+                Environmental method
+              </label>
+              <select
+                value={environmentalMethodFilter}
+                onChange={(event) => setEnvironmentalMethodFilter(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ALL">All methods</option>
+                {environmentalMethodOptions.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div>
               <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
@@ -365,12 +472,30 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                 setRunwayFilter("ALL")
                 setAircraftFilter("ALL")
                 setDescentFilter("ALL")
+                setEnvironmentalMethodFilter("ALL")
+                setDateFilter("ALL")
+                setFlightSearch("")
                 setMinEfficiency(0)
               }}
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
             >
               Reset filters
             </button>
+          </div>
+
+          <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Showing {filteredFlights.length} of {flights.length} flights
+            </span>
+            {(flightSearch ||
+              dateFilter !== "ALL" ||
+              environmentalMethodFilter !== "ALL" ||
+              runwayFilter !== "ALL" ||
+              aircraftFilter !== "ALL" ||
+              descentFilter !== "ALL" ||
+              minEfficiency > 0) && (
+              <span className="text-cyan-300">filters active</span>
+            )}
           </div>
 
           <div className="max-h-[620px] space-y-3 overflow-y-auto pr-1">
