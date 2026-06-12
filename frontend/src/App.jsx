@@ -13,6 +13,51 @@ function toMs(timestamp) {
   return Number.isNaN(value) ? null : value
 }
 
+function getArrivalTimestamp(flight) {
+  return (
+    flight?.approach_clearance_time ||
+    flight?.last_timestamp ||
+    flight?.first_timestamp ||
+    null
+  )
+}
+
+function getFlightDate(flight) {
+  const timestamp = getArrivalTimestamp(flight)
+  return timestamp ? timestamp.slice(0, 10) : null
+}
+
+function getFlightHourLabel(flight) {
+  const timestamp = getArrivalTimestamp(flight)
+
+  if (!timestamp) return null
+
+  const date = new Date(timestamp)
+
+  if (Number.isNaN(date.getTime())) return null
+
+  return `${String(date.getHours()).padStart(2, "0")}:00`
+}
+
+function sumFlightField(flights, field) {
+  return flights.reduce((total, flight) => {
+    const value = Number(flight[field] || 0)
+    return total + value
+  }, 0)
+}
+
+function averageFlightField(flights, field) {
+  if (!flights || flights.length === 0) return null
+
+  const values = flights
+    .map((flight) => Number(flight[field]))
+    .filter((value) => Number.isFinite(value))
+
+  if (values.length === 0) return null
+
+  return values.reduce((total, value) => total + value, 0) / values.length
+}
+
 function flightOverlapsSelected(candidateFlight, selectedFlight, windowMinutes) {
   if (!candidateFlight || !selectedFlight) return false
 
@@ -52,6 +97,7 @@ function App() {
   const [descentFilter, setDescentFilter] = useState("ALL")
   const [environmentalMethodFilter, setEnvironmentalMethodFilter] = useState("ALL")
   const [dateFilter, setDateFilter] = useState("ALL")
+  const [hourFilter, setHourFilter] = useState("ALL")
   const [flightSearch, setFlightSearch] = useState("")
   const [minEfficiency, setMinEfficiency] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -158,20 +204,20 @@ function App() {
 
   const dateOptions = useMemo(() => {
     return Array.from(
-      new Set(
-        flights
-          .map((flight) => {
-            const timestamp =
-              flight.approach_clearance_time ||
-              flight.last_timestamp ||
-              flight.first_timestamp
-
-            return timestamp ? timestamp.slice(0, 10) : null
-          })
-          .filter(Boolean)
-      )
+      new Set(flights.map((flight) => getFlightDate(flight)).filter(Boolean))
     ).sort()
   }, [flights])
+
+  const hourOptions = useMemo(() => {
+    const relevantFlights =
+      dateFilter === "ALL"
+        ? flights
+        : flights.filter((flight) => getFlightDate(flight) === dateFilter)
+
+    return Array.from(
+      new Set(relevantFlights.map((flight) => getFlightHourLabel(flight)).filter(Boolean))
+    ).sort()
+  }, [flights, dateFilter])
 
   const filteredFlights = useMemo(() => {
     const normalizedSearch = flightSearch.trim().toLowerCase()
@@ -190,16 +236,14 @@ function App() {
         environmentalMethodFilter === "ALL" ||
         flight.environmental_method === environmentalMethodFilter
 
-      const timestamp =
-        flight.approach_clearance_time ||
-        flight.last_timestamp ||
-        flight.first_timestamp
-
-      const flightDate = timestamp ? timestamp.slice(0, 10) : null
+      const flightDate = getFlightDate(flight)
+      const flightHour = getFlightHourLabel(flight)
 
       const matchesDate =
         dateFilter === "ALL" || flightDate === dateFilter
 
+      const matchesHour =
+        hourFilter === "ALL" || flightHour === hourFilter
       const matchesSearch =
         normalizedSearch.length === 0 ||
         String(flight.callsign || "").toLowerCase().includes(normalizedSearch) ||
@@ -215,6 +259,7 @@ function App() {
         matchesDescent &&
         matchesEnvironmentalMethod &&
         matchesDate &&
+        matchesHour &&
         matchesSearch &&
         matchesEfficiency
       )
@@ -226,9 +271,51 @@ function App() {
     descentFilter,
     environmentalMethodFilter,
     dateFilter,
+    hourFilter,
     flightSearch,
     minEfficiency,
   ])
+
+  const scenarioFlights = useMemo(() => {
+    return flights.filter((flight) => {
+      const flightDate = getFlightDate(flight)
+      const flightHour = getFlightHourLabel(flight)
+
+      const matchesDate =
+        dateFilter === "ALL" || flightDate === dateFilter
+
+      const matchesHour =
+        hourFilter === "ALL" || flightHour === hourFilter
+
+      const matchesRunway =
+        runwayFilter === "ALL" || flight.arrival_runway === runwayFilter
+
+      return matchesDate && matchesHour && matchesRunway
+    })
+  }, [flights, dateFilter, hourFilter, runwayFilter])
+
+  const scenarioSummary = useMemo(() => {
+    const totalFuel = sumFlightField(scenarioFlights, "final_fuel_kg")
+    const totalCo2 = sumFlightField(scenarioFlights, "final_co2_kg")
+    const averageEfficiency = averageFlightField(scenarioFlights, "efficiency_score")
+
+    const interruptedDescents = scenarioFlights.filter(
+      (flight) => flight.descent_class === "Interrupted descent"
+    ).length
+
+    const openapFlights = scenarioFlights.filter(
+      (flight) => flight.environmental_method === "OpenAP"
+    ).length
+
+    return {
+      nFlights: scenarioFlights.length,
+      totalFuel,
+      totalCo2,
+      averageEfficiency,
+      interruptedDescents,
+      openapFlights,
+    }
+  }, [scenarioFlights])
 
   const selectedFlight = useMemo(() => {
     return flights.find((flight) => flight.flight_id === selectedFlightId) || null
@@ -346,6 +433,18 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           </div>
         </section>
         <DatasetAnalytics analytics={analytics} />
+        <TrafficScenarioPanel
+          dateFilter={dateFilter}
+          setDateFilter={setDateFilter}
+          hourFilter={hourFilter}
+          setHourFilter={setHourFilter}
+          runwayFilter={runwayFilter}
+          setRunwayFilter={setRunwayFilter}
+          dateOptions={dateOptions}
+          hourOptions={hourOptions}
+          runwayOptions={runwayOptions}
+          summary={scenarioSummary}
+        />
         <aside className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Flight Selector</h2>
@@ -434,6 +533,24 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
             <div>
               <label className="mb-1 block text-xs text-slate-500">
+                Hour block
+              </label>
+              <select
+                value={hourFilter}
+                onChange={(event) => setHourFilter(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ALL">All hours</option>
+                {hourOptions.map((hour) => (
+                  <option key={hour} value={hour}>
+                    {hour}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">
                 Environmental method
               </label>
               <select
@@ -474,6 +591,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                 setDescentFilter("ALL")
                 setEnvironmentalMethodFilter("ALL")
                 setDateFilter("ALL")
+                setHourFilter("ALL")
                 setFlightSearch("")
                 setMinEfficiency(0)
               }}
@@ -489,6 +607,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             </span>
             {(flightSearch ||
               dateFilter !== "ALL" ||
+              hourFilter !== "ALL" ||
               environmentalMethodFilter !== "ALL" ||
               runwayFilter !== "ALL" ||
               aircraftFilter !== "ALL" ||
@@ -752,6 +871,156 @@ function PageShell({ children }) {
     </div>
   )
 }
+function TrafficScenarioPanel({
+  dateFilter,
+  setDateFilter,
+  hourFilter,
+  setHourFilter,
+  runwayFilter,
+  setRunwayFilter,
+  dateOptions,
+  hourOptions,
+  runwayOptions,
+  summary,
+}) {
+  return (
+    <section className="col-span-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            Traffic Scenario Selector
+          </h2>
+          <p className="text-sm text-slate-400">
+            Select a date, hour block, and runway to inspect same-day arrival traffic context.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300">
+          Arrival-flow analysis
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">
+            Scenario date
+          </label>
+          <select
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+          >
+            <option value="ALL">All dates</option>
+            {dateOptions.map((date) => (
+              <option key={date} value={date}>
+                {date}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">
+            Hour block
+          </label>
+          <select
+            value={hourFilter}
+            onChange={(event) => setHourFilter(event.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+          >
+            <option value="ALL">All hours</option>
+            {hourOptions.map((hour) => (
+              <option key={hour} value={hour}>
+                {hour}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">
+            Runway
+          </label>
+          <select
+            value={runwayFilter}
+            onChange={(event) => setRunwayFilter(event.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+          >
+            <option value="ALL">All runways</option>
+            {runwayOptions.map((runway) => (
+              <option key={runway} value={runway}>
+                {runway}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">
+            Scenario status
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              setDateFilter("ALL")
+              setHourFilter("ALL")
+              setRunwayFilter("ALL")
+            }}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
+          >
+            Reset scenario
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <ScenarioMetric
+          label="Scenario flights"
+          value={summary.nFlights.toLocaleString()}
+        />
+        <ScenarioMetric
+          label="Total fuel"
+          value={`${Math.round(summary.totalFuel).toLocaleString()} kg`}
+        />
+        <ScenarioMetric
+          label="Total CO₂"
+          value={`${Math.round(summary.totalCo2).toLocaleString()} kg`}
+        />
+        <ScenarioMetric
+          label="Avg efficiency"
+          value={
+            summary.averageEfficiency === null
+              ? "N/A"
+              : summary.averageEfficiency.toFixed(1)
+          }
+        />
+        <ScenarioMetric
+          label="Interrupted descents"
+          value={summary.interruptedDescents.toLocaleString()}
+        />
+        <ScenarioMetric
+          label="OpenAP flights"
+          value={summary.openapFlights.toLocaleString()}
+        />
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-slate-500">
+        Scenario time uses approach clearance time where available, otherwise last timestamp or first timestamp.
+        This provides an operational arrival-flow view for sequencing and traffic-context analysis.
+      </p>
+    </section>
+  )
+}
+
+function ScenarioMetric({ label, value }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-cyan-300">{value}</p>
+    </div>
+  )
+}
+
 
 function TopKpiCard({ label, value, subtext }) {
   return (
