@@ -480,7 +480,10 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           )}
           {selectedFlight && (
             <div className="mt-5">
-              <WeatherPanel weather={selectedFlight.weather} />
+              <WeatherPanel
+                weather={selectedFlight.weather}
+                runway={selectedFlight.arrival_runway}
+              />
             </div>
           )}
         </aside>
