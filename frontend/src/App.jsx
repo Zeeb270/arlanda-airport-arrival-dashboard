@@ -43,6 +43,10 @@ function App() {
   const [trajectoryLoading, setTrajectoryLoading] = useState(false)
   const [visibleTrajectories, setVisibleTrajectories] = useState({})
   const [timeWindowMinutes, setTimeWindowMinutes] = useState(20)
+  const [runwayFilter, setRunwayFilter] = useState("ALL")
+  const [aircraftFilter, setAircraftFilter] = useState("ALL")
+  const [descentFilter, setDescentFilter] = useState("ALL")
+  const [minEfficiency, setMinEfficiency] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -119,9 +123,65 @@ function App() {
     loadVisibleTrajectories()
   }, [selectedFlightId, flights, timeWindowMinutes])
   
+  const runwayOptions = useMemo(() => {
+    return Array.from(
+      new Set(flights.map((flight) => flight.arrival_runway).filter(Boolean))
+    ).sort()
+  }, [flights])
+
+  const aircraftOptions = useMemo(() => {
+    return Array.from(
+      new Set(flights.map((flight) => flight.aircraft_type).filter(Boolean))
+    ).sort()
+  }, [flights])
+
+  const descentOptions = useMemo(() => {
+    return Array.from(
+      new Set(flights.map((flight) => flight.descent_class).filter(Boolean))
+    ).sort()
+  }, [flights])
+
+  const filteredFlights = useMemo(() => {
+    return flights.filter((flight) => {
+      const matchesRunway =
+        runwayFilter === "ALL" || flight.arrival_runway === runwayFilter
+
+      const matchesAircraft =
+        aircraftFilter === "ALL" || flight.aircraft_type === aircraftFilter
+
+      const matchesDescent =
+        descentFilter === "ALL" || flight.descent_class === descentFilter
+
+      const matchesEfficiency =
+        Number(flight.efficiency_score || 0) >= Number(minEfficiency)
+
+      return (
+        matchesRunway &&
+        matchesAircraft &&
+        matchesDescent &&
+        matchesEfficiency
+      )
+    })
+  }, [flights, runwayFilter, aircraftFilter, descentFilter, minEfficiency])
+
   const selectedFlight = useMemo(() => {
     return flights.find((flight) => flight.flight_id === selectedFlightId) || null
   }, [flights, selectedFlightId])
+
+  useEffect(() => {
+    if (filteredFlights.length === 0) {
+      setSelectedFlightId(null)
+      return
+    }
+
+    const selectedStillVisible = filteredFlights.some(
+      (flight) => flight.flight_id === selectedFlightId
+    )
+
+    if (!selectedStillVisible) {
+      setSelectedFlightId(filteredFlights[0].flight_id)
+    }
+  }, [filteredFlights, selectedFlightId])
 
   if (loading) {
     return (
@@ -167,12 +227,91 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Flight Selector</h2>
             <p className="text-sm text-slate-400">
-              Select one arrival into Stockholm Arlanda.
+              Select and filter arrivals into Stockholm Arlanda.
             </p>
           </div>
 
+          <div className="mb-4 space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Runway</label>
+              <select
+                value={runwayFilter}
+                onChange={(event) => setRunwayFilter(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ALL">All runways</option>
+                {runwayOptions.map((runway) => (
+                  <option key={runway} value={runway}>
+                    {runway}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Aircraft type</label>
+              <select
+                value={aircraftFilter}
+                onChange={(event) => setAircraftFilter(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ALL">All aircraft</option>
+                {aircraftOptions.map((aircraftType) => (
+                  <option key={aircraftType} value={aircraftType}>
+                    {aircraftType}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Descent class</label>
+              <select
+                value={descentFilter}
+                onChange={(event) => setDescentFilter(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ALL">All descent classes</option>
+                {descentOptions.map((descentClass) => (
+                  <option key={descentClass} value={descentClass}>
+                    {descentClass}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                <label>Minimum efficiency</label>
+                <span>{minEfficiency}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={minEfficiency}
+                onChange={(event) => setMinEfficiency(Number(event.target.value))}
+                className="w-full accent-cyan-400"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRunwayFilter("ALL")
+                setAircraftFilter("ALL")
+                setDescentFilter("ALL")
+                setMinEfficiency(0)
+              }}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
+            >
+              Reset filters
+            </button>
+          </div>
+
           <div className="max-h-[620px] space-y-3 overflow-y-auto pr-1">
-            {flights.map((flight) => {
+            {filteredFlights.map((flight) => {
               const selected = flight.flight_id === selectedFlightId
 
               return (
@@ -203,6 +342,11 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                 </button>
               )
             })}
+            {filteredFlights.length === 0 && (
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+                No flights match the selected filters.
+              </div>
+            )}
           </div>
         </aside>
 
@@ -240,7 +384,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           ) : (
             <FlightMap
               selectedFlight={selectedFlight}
-              flights={flights}
+              flights={filteredFlights}
               visibleTrajectories={visibleTrajectories}
             />
           )}
@@ -333,12 +477,12 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
               </p>
             </div>
             <p className="text-sm text-slate-400">
-              Dataset size: {flights.length} flights
+              Showing: {filteredFlights.length} / {flights.length} flights
             </p>
           </div>
 
           <FlightComparison
-            flights={flights}
+            flights={filteredFlights}
             selectedFlightId={selectedFlightId}
             onSelectFlight={setSelectedFlightId}
           />
