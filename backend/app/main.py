@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.analytics import load_analytics_summary
 from app.data_loader import (
     get_flight_by_id,
     get_trajectory_by_flight_id,
@@ -46,6 +47,12 @@ def api_summary():
     except FileNotFoundError as error:
         raise HTTPException(status_code=500, detail=str(error))
 
+@app.get("/api/analytics/summary")
+def api_analytics_summary():
+    try:
+        return load_analytics_summary()
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=500, detail=str(error))
 
 @app.get("/api/flights")
 def api_flights():

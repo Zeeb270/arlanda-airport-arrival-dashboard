@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { getFlights, getSummary, getTrajectory } from "./services/api"
+import { getAnalyticsSummary, getFlights, getSummary, getTrajectory } from "./services/api"
 import FlightMap from "./components/FlightMap"
 import TrajectoryCharts from "./components/TrajectoryCharts"
 import FlightComparison from "./components/FlightComparison"
 import MethodologyPanel from "./components/MethodologyPanel"
 import WeatherPanel from "./components/WeatherPanel"
+import DatasetAnalytics from "./components/DatasetAnalytics"
 
 function toMs(timestamp) {
   if (!timestamp) return null
@@ -39,6 +40,7 @@ function flightOverlapsSelected(candidateFlight, selectedFlight, windowMinutes) 
 
 function App() {
   const [summary, setSummary] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
   const [flights, setFlights] = useState([])
   const [selectedFlightId, setSelectedFlightId] = useState(null)
   const [selectedTrajectory, setSelectedTrajectory] = useState([])
@@ -58,12 +60,14 @@ function App() {
         setLoading(true)
         setError("")
 
-        const [summaryData, flightsData] = await Promise.all([
+        const [summaryData, analyticsData, flightsData] = await Promise.all([
           getSummary(),
+          getAnalyticsSummary(),
           getFlights(),
         ])
 
         setSummary(summaryData)
+        setAnalytics(analyticsData)
         setFlights(flightsData)
 
         if (flightsData.length > 0) {
@@ -227,16 +231,21 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
       <main className="grid min-h-[calc(100vh-116px)] grid-cols-12 gap-4 p-4">
         
 
-        <section className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
           <TopKpiCard
             label="Flights"
             value={summary?.n_flights?.toLocaleString() || "0"}
-            subtext="Initial research sample"
+            subtext="Processed arrivals"
           />
           <TopKpiCard
             label="Trajectory points"
             value={summary?.total_points?.toLocaleString() || "0"}
             subtext="Radar/track observations"
+          />
+          <TopKpiCard
+            label="Avg efficiency"
+            value={analytics?.dataset?.average_efficiency_score?.toLocaleString() || "N/A"}
+            subtext="Prototype score"
           />
           <TopKpiCard
             label="Final fuel"
@@ -249,9 +258,9 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             subtext="Estimated emissions"
           />
           <TopKpiCard
-            label="Model coverage"
-            value={`${summary?.openap_count || 0}/${summary?.n_flights || 0}`}
-            subtext="Flights using OpenAP"
+            label="OpenAP coverage"
+            value={`${analytics?.dataset?.openap_coverage_percent?.toLocaleString() || "0"}%`}
+            subtext={`${summary?.openap_count || 0}/${summary?.n_flights || 0} flights`}
           />
         </section>
 
@@ -262,10 +271,10 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                 Research prototype status
               </p>
               <p className="text-sm leading-6 text-slate-300">
-                This dashboard uses 10 real flight JSON records for proof-of-concept development.
+                This dashboard uses 407 processed Stockholm Arlanda arrival records for research prototype development.
                 It is suitable for trajectory reconstruction, visualization, CDO-style analysis,
-                and environmental-estimation workflow testing. It is not yet sufficient for
-                statistical conclusions about Stockholm Arlanda operations.
+                and environmental-estimation workflow testing. It supports exploratory analysis,
+                but larger and more balanced samples are still needed for strong operational conclusions.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
@@ -276,6 +285,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             </div>
           </div>
         </section>
+        <DatasetAnalytics analytics={analytics} />
         <aside className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Flight Selector</h2>

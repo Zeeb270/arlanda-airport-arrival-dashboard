@@ -14,6 +14,10 @@ export function getSummary() {
   return request("/api/summary")
 }
 
+export function getAnalyticsSummary() {
+  return request("/api/analytics/summary")
+}
+
 export function getFlights() {
   return request("/api/flights")
 }
