@@ -409,8 +409,16 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
               value={summary?.runways?.join(" / ") || "N/A"}
             />
             <MetricCard
-              label="CO₂ Proxy"
-              value={`${summary?.total_estimated_co2_kg_proxy?.toLocaleString() || "0"} kg`}
+              label="Final Fuel Estimate"
+              value={`${summary?.total_final_fuel_kg?.toLocaleString() || "0"} kg`}
+            />
+            <MetricCard
+              label="Final CO₂ Estimate"
+              value={`${summary?.total_final_co2_kg?.toLocaleString() || "0"} kg`}
+            />
+            <MetricCard
+              label="OpenAP / Fallback"
+              value={`${summary?.openap_count || 0} / ${summary?.fallback_proxy_count || 0}`}
             />
           </div>
 
@@ -443,12 +451,28 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                   value={`${selectedFlight.duration_min} min`}
                 />
                 <InfoRow
-                  label="Fuel proxy"
-                  value={`${selectedFlight.estimated_fuel_kg_proxy} kg`}
+                  label="Final fuel"
+                  value={`${selectedFlight.final_fuel_kg?.toLocaleString() || "N/A"} kg`}
                 />
                 <InfoRow
-                  label="CO₂ proxy"
-                  value={`${selectedFlight.estimated_co2_kg_proxy} kg`}
+                  label="Final CO₂"
+                  value={`${selectedFlight.final_co2_kg?.toLocaleString() || "N/A"} kg`}
+                />
+                <InfoRow
+                  label="Method"
+                  value={selectedFlight.environmental_method}
+                /> 
+                <InfoRow
+                  label="OpenAP type"
+                  value={selectedFlight.openap_aircraft_type}
+                />
+                <InfoRow
+                  label="Assumed mass"
+                  value={
+                    selectedFlight.assumed_mass_kg
+                      ? `${selectedFlight.assumed_mass_kg.toLocaleString()} kg`
+                      : "N/A"
+                  }
                 />
               </dl>
             </div>

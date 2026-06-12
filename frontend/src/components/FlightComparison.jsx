@@ -1,6 +1,6 @@
 function FlightComparison({ flights, selectedFlightId, onSelectFlight }) {
   const sortedFlights = [...flights].sort((a, b) => {
-    return (b.estimated_co2_kg_proxy || 0) - (a.estimated_co2_kg_proxy || 0)
+    return (b.final_co2_kg || 0) - (a.final_co2_kg || 0)
   })
 
   return (
@@ -24,8 +24,9 @@ function FlightComparison({ flights, selectedFlightId, onSelectFlight }) {
               <th className="px-4 py-3 text-right">Distance NM</th>
               <th className="px-4 py-3 text-right">Duration min</th>
               <th className="px-4 py-3 text-right">Level-offs</th>
-              <th className="px-4 py-3 text-right">Fuel kg</th>
-              <th className="px-4 py-3 text-right">CO₂ kg</th>
+              <th className="px-4 py-3 text-right">Final fuel kg</th>
+              <th className="px-4 py-3 text-right">Final CO₂ kg</th>
+              <th className="px-4 py-3">Method</th>
               <th className="px-4 py-3 text-right">Score</th>
             </tr>
           </thead>
@@ -77,10 +78,21 @@ function FlightComparison({ flights, selectedFlightId, onSelectFlight }) {
                     {flight.level_off_count ?? "N/A"}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-300">
-                    {formatNumber(flight.estimated_fuel_kg_proxy)}
+                    {formatNumber(flight.final_fuel_kg)}
                   </td>
                   <td className="px-4 py-3 text-right text-cyan-300">
-                    {formatNumber(flight.estimated_co2_kg_proxy)}
+                    {formatNumber(flight.final_co2_kg)}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">
+                    <span
+                        className={`rounded-full px-2 py-1 text-xs ${
+                            flight.environmental_method === "OpenAP"
+                                ? "bg-emerald-500/10 text-emerald-300"
+                                : "bg-amber-500/10 text-amber-300"
+                        }`}
+                    >
+                        {flight.environmental_method || "N/A"}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-right text-slate-300">
                     {flight.efficiency_score ?? "N/A"}
