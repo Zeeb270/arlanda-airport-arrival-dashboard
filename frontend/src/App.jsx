@@ -3,6 +3,8 @@ import { getFlights, getSummary, getTrajectory } from "./services/api"
 import FlightMap from "./components/FlightMap"
 import TrajectoryCharts from "./components/TrajectoryCharts"
 import FlightComparison from "./components/FlightComparison"
+import MethodologyPanel from "./components/MethodologyPanel"
+
 
 function toMs(timestamp) {
   if (!timestamp) return null
@@ -487,6 +489,23 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             onSelectFlight={setSelectedFlightId}
           />
         </section>
+        <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Methodology and Research Notes</h2>
+              <p className="text-sm text-slate-400">
+                How the dashboard converts raw flight JSON into arrival-efficiency and environmental indicators.
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
+              Prototype assumptions
+            </span>
+          </div>
+
+          <MethodologyPanel />
+        </section>
+
+
       </main>
     </PageShell>
   )
