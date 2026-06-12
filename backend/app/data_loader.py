@@ -43,6 +43,124 @@ def load_openap_metrics_map() -> Dict[str, Dict[str, Any]]:
     rows = load_openap_metrics()
     return {str(row.get("flight_id")): row for row in rows}
 
+def load_weather_hourly() -> List[Dict[str, Any]]:
+    try:
+        return read_json_file("weather_hourly.json")
+    except FileNotFoundError:
+        return []
+
+def get_nearest_weather_for_timestamp(timestamp: str | None) -> Dict[str, Any] | None:
+    if not timestamp:
+        return None
+
+    from datetime import datetime
+
+    try:
+        flight_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        flight_time = flight_time.replace(tzinfo=None)
+    except ValueError:
+        return None
+
+    weather_rows = load_weather_hourly()
+
+    if not weather_rows:
+        return None
+
+    best_row = None
+    best_diff = None
+
+    for row in weather_rows:
+        weather_time_value = row.get("time")
+
+        if not weather_time_value:
+            continue
+
+        try:
+            weather_time = datetime.fromisoformat(weather_time_value)
+        except ValueError:
+            continue
+
+        diff = abs((flight_time - weather_time).total_seconds())
+
+        if best_diff is None or diff < best_diff:
+            best_diff = diff
+            best_row = row
+
+    return best_row
+    if not timestamp:
+        return None
+
+    from datetime import datetime
+
+    try:
+        flight_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        flight_time = flight_time.replace(tzinfo=None)
+    except ValueError:
+        return None
+
+    weather_rows = load_weather_hourly()
+
+    if not weather_rows:
+        return None
+
+    best_row = None
+    best_diff = None
+
+    for row in weather_rows:
+        weather_time_value = row.get("time")
+
+        if not weather_time_value:
+            continue
+
+        try:
+            weather_time = datetime.fromisoformat(weather_time_value)
+        except ValueError:
+            continue
+
+        diff = abs((flight_time - weather_time).total_seconds())
+
+        if best_diff is None or diff < best_diff:
+            best_diff = diff
+            best_row = row
+
+    return best_row
+    if not timestamp:
+        return None
+
+    from datetime import datetime
+
+    try:
+        flight_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+    weather_rows = load_weather_hourly()
+
+    if not weather_rows:
+        return None
+
+    best_row = None
+    best_diff = None
+
+    for row in weather_rows:
+        weather_time_value = row.get("time")
+
+        if not weather_time_value:
+            continue
+
+        try:
+            weather_time = datetime.fromisoformat(weather_time_value)
+        except ValueError:
+            continue
+
+        diff = abs((flight_time.replace(tzinfo=None) - weather_time).total_seconds())
+
+        if best_diff is None or diff < best_diff:
+            best_diff = diff
+            best_row = row
+
+    return best_row
+
 
 def merge_flight_environmental_metrics(
     flight: Dict[str, Any],
@@ -62,6 +180,9 @@ def merge_flight_environmental_metrics(
                 "estimated_fuel_kg_openap": None,
                 "estimated_co2_kg_openap": None,
             }
+        )
+        merged["weather"] = get_nearest_weather_for_timestamp(
+            merged.get("approach_clearance_time") or merged.get("last_timestamp") or merged.get("first_timestamp")
         )
         return merged
 
@@ -89,13 +210,23 @@ def load_flights() -> List[Dict[str, Any]]:
     flights = load_flights_base()
     metrics_map = load_openap_metrics_map()
 
-    return [
-        merge_flight_environmental_metrics(
+    merged_flights = []
+
+    for flight in flights:
+        merged = merge_flight_environmental_metrics(
             flight,
             metrics_map.get(str(flight.get("flight_id"))),
         )
-        for flight in flights
-    ]
+
+        merged["weather"] = get_nearest_weather_for_timestamp(
+            merged.get("approach_clearance_time")
+            or merged.get("last_timestamp")
+            or merged.get("first_timestamp")
+        )
+
+        merged_flights.append(merged)
+
+    return merged_flights
 
 
 def load_summary() -> Dict[str, Any]:

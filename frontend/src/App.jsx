@@ -4,7 +4,7 @@ import FlightMap from "./components/FlightMap"
 import TrajectoryCharts from "./components/TrajectoryCharts"
 import FlightComparison from "./components/FlightComparison"
 import MethodologyPanel from "./components/MethodologyPanel"
-
+import WeatherPanel from "./components/WeatherPanel"
 
 function toMs(timestamp) {
   if (!timestamp) return null
@@ -475,6 +475,12 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
                   }
                 />
               </dl>
+            </div>
+            
+          )}
+          {selectedFlight && (
+            <div className="mt-5">
+              <WeatherPanel weather={selectedFlight.weather} />
             </div>
           )}
         </aside>
