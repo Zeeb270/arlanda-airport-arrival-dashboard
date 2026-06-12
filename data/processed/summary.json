@@ -1,24 +1,46 @@
 {
-  "n_flights": 10,
-  "total_points": 5341,
+  "n_flights": 407,
+  "total_points": 201950,
   "runways": [
+    "01L",
     "19L",
     "19R",
     "26"
   ],
   "aircraft_types": [
+    "A318",
     "A319",
     "A320",
+    "A321",
+    "A333",
+    "AT72",
+    "AT76",
+    "ATP",
+    "B463",
+    "B733",
     "B736",
     "B737",
     "B738",
+    "B739",
+    "B752",
+    "B763",
+    "B77W",
+    "B788",
+    "BCS3",
+    "CRJ7",
+    "CRJ9",
+    "DH8D",
+    "E190",
     "F50",
+    "JS32",
+    "RJ1H",
     "SF34"
   ],
   "descent_classes": [
+    "CDO-like",
     "Interrupted descent",
     "Partial CDO"
   ],
-  "total_estimated_fuel_kg_proxy": 8268.8,
-  "total_estimated_co2_kg_proxy": 26129.5
+  "total_estimated_fuel_kg_proxy": 315458.0,
+  "total_estimated_co2_kg_proxy": 996847.1
 }

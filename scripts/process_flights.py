@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = PROJECT_ROOT / "data" / "raw" / "json_flights"
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+TRAJECTORY_OUTPUT_DIR = PROCESSED_DIR / "trajectories"
 
 ESSA_LAT = 59.6519
 ESSA_LON = 17.9186
@@ -327,14 +328,14 @@ def process_one_file(path: Path) -> Dict[str, Any]:
 
 def main() -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-
+    TRAJECTORY_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     json_files = sorted(RAW_DIR.glob("*.json"))
 
     if not json_files:
         raise FileNotFoundError(f"No JSON files found in {RAW_DIR}")
 
     flights = []
-    trajectories = {}
+    trajectories_index = {}
 
     print(f"Found {len(json_files)} JSON files")
 
@@ -346,7 +347,18 @@ def main() -> None:
         trajectory = result["trajectory"]
 
         flights.append(flight)
-        trajectories[flight["flight_id"]] = trajectory
+
+        trajectory_filename = f"{flight['flight_id']}.json"
+        trajectory_path = TRAJECTORY_OUTPUT_DIR / trajectory_filename
+
+        with trajectory_path.open("w", encoding="utf-8") as file:
+            json.dump(trajectory, file, indent=2)
+
+        trajectories_index[flight["flight_id"]] = {
+            "flight_id": flight["flight_id"],
+            "path": f"trajectories/{trajectory_filename}",
+            "n_points": len(trajectory),
+        }
 
     summary = {
         "n_flights": len(flights),
@@ -361,15 +373,16 @@ def main() -> None:
     with (PROCESSED_DIR / "flights.json").open("w", encoding="utf-8") as file:
         json.dump(flights, file, indent=2)
 
-    with (PROCESSED_DIR / "trajectories.json").open("w", encoding="utf-8") as file:
-        json.dump(trajectories, file, indent=2)
+    with (PROCESSED_DIR / "trajectories_index.json").open("w", encoding="utf-8") as file:
+        json.dump(trajectories_index, file, indent=2)
 
     with (PROCESSED_DIR / "summary.json").open("w", encoding="utf-8") as file:
         json.dump(summary, file, indent=2)
 
     print("\nProcessing complete")
     print(f"Flights saved to: {PROCESSED_DIR / 'flights.json'}")
-    print(f"Trajectories saved to: {PROCESSED_DIR / 'trajectories.json'}")
+    print(f"Trajectory files saved to: {TRAJECTORY_OUTPUT_DIR}")
+    print(f"Trajectory index saved to: {PROCESSED_DIR / 'trajectories_index.json'}")
     print(f"Summary saved to: {PROCESSED_DIR / 'summary.json'}")
     print("\nSummary:")
     print(json.dumps(summary, indent=2))

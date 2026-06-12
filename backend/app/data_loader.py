@@ -24,8 +24,21 @@ def load_flights_base() -> List[Dict[str, Any]]:
     return read_json_file("flights.json")
 
 
-def load_trajectories() -> Dict[str, List[Dict[str, Any]]]:
-    return read_json_file("trajectories.json")
+def load_trajectories_index() -> Dict[str, Dict[str, Any]]:
+    return read_json_file("trajectories_index.json")
+
+
+def load_trajectory_file(flight_id: str) -> List[Dict[str, Any]]:
+    path = PROCESSED_DIR / "trajectories" / f"{flight_id}.json"
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Trajectory file not found: {path}. "
+            "Run: python scripts/process_flights.py"
+        )
+
+    with path.open("r", encoding="utf-8") as file:
+        return json.load(file)
 
 
 def load_summary_base() -> Dict[str, Any]:
@@ -269,10 +282,7 @@ def get_flight_by_id(flight_id: str) -> Dict[str, Any]:
 
 
 def get_trajectory_by_flight_id(flight_id: str) -> List[Dict[str, Any]]:
-    trajectories = load_trajectories()
-    trajectory = trajectories.get(str(flight_id))
-
-    if trajectory is None:
-        raise KeyError(f"Trajectory not found for flight: {flight_id}")
-
-    return trajectory
+    try:
+        return load_trajectory_file(str(flight_id))
+    except FileNotFoundError as error:
+        raise KeyError(str(error))
