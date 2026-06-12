@@ -17,7 +17,7 @@ else:
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 
-TRAJECTORIES_PATH = PROCESSED_DIR / "trajectories.json"
+TRAJECTORY_DIR = PROCESSED_DIR / "trajectories"
 FLIGHTS_PATH = PROCESSED_DIR / "flights.json"
 OUTPUT_PATH = PROCESSED_DIR / "openap_metrics.json"
 
@@ -232,7 +232,6 @@ def build_failed_result(
 
 def main() -> None:
     flights = load_json(FLIGHTS_PATH)
-    trajectories = load_json(TRAJECTORIES_PATH)
 
     results = []
 
@@ -240,7 +239,12 @@ def main() -> None:
 
     for flight in flights:
         flight_id = str(flight.get("flight_id"))
-        trajectory = trajectories.get(flight_id, [])
+        trajectory_path = TRAJECTORY_DIR / f"{flight_id}.json"
+
+        if trajectory_path.exists():
+            trajectory = load_json(trajectory_path)
+        else:
+            trajectory = []
 
         print(f"Estimating OpenAP fuel for {flight_id} / {flight.get('callsign')}")
 
