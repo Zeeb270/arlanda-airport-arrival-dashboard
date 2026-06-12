@@ -56,6 +56,7 @@ The current dataset contains 10 flight JSON files and is used as a proof-of-conc
 
 ## 3. System Architecture
 
+```text
 Raw JSON flight files
         ↓
 Python processing scripts
@@ -67,9 +68,10 @@ FastAPI backend
 React dashboard
         ↓
 Interactive map, animation, charts, metrics, weather, and comparison tools
-
+```
 ## 4. Repository Structure
 
+```text
 arlanda-airport-arrival-dashboard/
 │
 ├── backend/
@@ -116,7 +118,7 @@ arlanda-airport-arrival-dashboard/
 │
 ├── README.md
 └── .gitignore
-
+```
 ## 5. Input Data
 
 The raw data consists of JSON files, where each file represents one flight.
