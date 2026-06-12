@@ -4,7 +4,7 @@ Interactive aviation research dashboard for analyzing Stockholm Arlanda Airport 
 
 This project is a research prototype built from real flight trajectory JSON files. It is designed to support exploratory analysis of arrival procedures, Continuous Descent Operations (CDO)-style behavior, environmental performance, and future arrival optimization workflows.
 
----
+
 
 ## 1. Project Objective
 
@@ -27,7 +27,7 @@ The system supports:
 
 The current dataset contains 10 flight JSON files and is used as a proof-of-concept dataset.
 
----
+
 
 ## 2. Technology Stack
 
@@ -56,7 +56,6 @@ The current dataset contains 10 flight JSON files and is used as a proof-of-conc
 
 ## 3. System Architecture
 
-```text
 Raw JSON flight files
         ↓
 Python processing scripts
