@@ -31,12 +31,12 @@ const airportIcon = L.divIcon({
   iconAnchor: [9, 9],
 })
 
-function createAircraftIcon(color, isSelected) {
+function createAircraftIcon(color, isSelected, headingDeg = 45) {
   return L.divIcon({
     className: "aircraft-icon",
     html: `<div style="
       font-size: ${isSelected ? 30 : 24}px;
-      transform: rotate(45deg);
+      transform: rotate(${headingDeg}deg);
       filter: drop-shadow(0 0 8px ${color});
       opacity: ${isSelected ? 1 : 0.85};
     ">✈️</div>`,
@@ -75,24 +75,27 @@ function FitBounds({ allPositions }) {
   return null
 }
 
-function validPositions(trajectory) {
+function validPoints(trajectory) {
   if (!trajectory || trajectory.length === 0) return []
 
   return trajectory
     .filter((point) => point.lat !== null && point.lon !== null)
-    .map((point) => [point.lat, point.lon])
+    .map((point) => ({
+      ...point,
+      timeMs: toMs(point.timestamp),
+    }))
+    .filter((point) => point.timeMs !== null)
+    .sort((a, b) => a.timeMs - b.timeMs)
+}
+
+function validPositions(trajectory) {
+  return validPoints(trajectory).map((point) => [point.lat, point.lon])
 }
 
 function getTrajectoryTimeRange(trajectory) {
-  if (!trajectory || trajectory.length === 0) return [null, null]
-
-  const times = trajectory
-    .map((point) => toMs(point.timestamp))
-    .filter((value) => value !== null)
-
-  if (times.length === 0) return [null, null]
-
-  return [Math.min(...times), Math.max(...times)]
+  const points = validPoints(trajectory)
+  if (points.length === 0) return [null, null]
+  return [points[0].timeMs, points[points.length - 1].timeMs]
 }
 
 function getPointAtTime(trajectory, currentTimeMs) {
@@ -100,34 +103,107 @@ function getPointAtTime(trajectory, currentTimeMs) {
     return null
   }
 
-  const validPoints = trajectory
-    .filter((point) => point.lat !== null && point.lon !== null && point.timestamp)
-    .map((point) => ({
-      ...point,
-      timeMs: toMs(point.timestamp),
-    }))
-    .filter((point) => point.timeMs !== null)
-    .sort((a, b) => a.timeMs - b.timeMs)
+  const points = validPoints(trajectory)
 
-  if (validPoints.length === 0) return null
+  if (points.length === 0) return null
 
-  if (currentTimeMs < validPoints[0].timeMs || currentTimeMs > validPoints[validPoints.length - 1].timeMs) {
+  if (currentTimeMs < points[0].timeMs || currentTimeMs > points[points.length - 1].timeMs) {
     return null
   }
 
-  let closestPoint = validPoints[0]
-  let smallestDiff = Math.abs(currentTimeMs - closestPoint.timeMs)
+  let closestIndex = 0
+  let smallestDiff = Math.abs(currentTimeMs - points[0].timeMs)
 
-  for (const point of validPoints) {
-    const diff = Math.abs(currentTimeMs - point.timeMs)
+  for (let index = 1; index < points.length; index += 1) {
+    const diff = Math.abs(currentTimeMs - points[index].timeMs)
 
     if (diff < smallestDiff) {
-      closestPoint = point
+      closestIndex = index
       smallestDiff = diff
     }
   }
 
-  return closestPoint
+  const closestPoint = points[closestIndex]
+  const previousPoint = points[Math.max(closestIndex - 1, 0)]
+  const nextPoint = points[Math.min(closestIndex + 1, points.length - 1)]
+
+  const headingDeg = calculateBearingDeg(
+    previousPoint.lat,
+    previousPoint.lon,
+    nextPoint.lat,
+    nextPoint.lon
+  )
+
+  return {
+    ...closestPoint,
+    headingDeg,
+  }
+}
+
+function calculateBearingDeg(lat1, lon1, lat2, lon2) {
+  if (lat1 === lat2 && lon1 === lon2) return 45
+
+  const phi1 = degreesToRadians(lat1)
+  const phi2 = degreesToRadians(lat2)
+  const deltaLon = degreesToRadians(lon2 - lon1)
+
+  const y = Math.sin(deltaLon) * Math.cos(phi2)
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLon)
+
+  const bearing = radiansToDegrees(Math.atan2(y, x))
+  return (bearing + 360) % 360
+}
+
+function degreesToRadians(degrees) {
+  return (degrees * Math.PI) / 180
+}
+
+function radiansToDegrees(radians) {
+  return (radians * 180) / Math.PI
+}
+
+function getAltitudeColor(altitudeFt) {
+  if (altitudeFt === null || altitudeFt === undefined) return "#94a3b8"
+
+  if (altitudeFt >= 30000) return "#7c3aed"
+  if (altitudeFt >= 20000) return "#2563eb"
+  if (altitudeFt >= 10000) return "#0891b2"
+  if (altitudeFt >= 5000) return "#16a34a"
+  if (altitudeFt >= 2000) return "#f59e0b"
+  return "#ef4444"
+}
+
+function AltitudeColoredPolyline({ trajectory }) {
+  const points = validPoints(trajectory)
+
+  if (points.length < 2) return null
+
+  return (
+    <>
+      {points.slice(1).map((point, index) => {
+        const previous = points[index]
+        const altitudeFt = point.altitude_ft
+        const color = getAltitudeColor(altitudeFt)
+
+        return (
+          <Polyline
+            key={`${point.timestamp}-${index}`}
+            positions={[
+              [previous.lat, previous.lon],
+              [point.lat, point.lon],
+            ]}
+            pathOptions={{
+              color,
+              weight: 5,
+              opacity: 0.9,
+            }}
+          />
+        )
+      })}
+    </>
+  )
 }
 
 function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
@@ -283,6 +359,16 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
         </div>
       </div>
 
+      <div className="absolute right-3 top-3 z-[1000] rounded-xl border border-slate-800 bg-slate-950/95 p-3 text-xs text-slate-300 shadow-lg">
+        <p className="mb-2 font-medium text-slate-100">Altitude color</p>
+        <LegendItem color="#7c3aed" label="≥ 30,000 ft" />
+        <LegendItem color="#2563eb" label="20,000–30,000 ft" />
+        <LegendItem color="#0891b2" label="10,000–20,000 ft" />
+        <LegendItem color="#16a34a" label="5,000–10,000 ft" />
+        <LegendItem color="#f59e0b" label="2,000–5,000 ft" />
+        <LegendItem color="#ef4444" label="< 2,000 ft" />
+      </div>
+
       <div className="absolute bottom-3 left-3 right-3 z-[1000] rounded-xl border border-slate-800 bg-slate-950/95 p-3 shadow-lg">
         <div className="mb-2 flex items-center justify-between gap-3 text-xs text-slate-300">
           <button
@@ -341,14 +427,23 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
           const isSelected = flight.flight_id === selectedFlight?.flight_id
           const color = isSelected ? "#22d3ee" : COLORS[index % COLORS.length]
 
+          if (isSelected) {
+            return (
+              <AltitudeColoredPolyline
+                key={flight.flight_id}
+                trajectory={trajectory}
+              />
+            )
+          }
+
           return (
             <Polyline
               key={flight.flight_id}
               positions={positions}
               pathOptions={{
                 color,
-                weight: isSelected ? 5 : 3,
-                opacity: isSelected ? 0.95 : 0.45,
+                weight: 3,
+                opacity: 0.45,
               }}
             />
           )
@@ -358,7 +453,7 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
           <Marker
             key={flight.flight_id}
             position={[point.lat, point.lon]}
-            icon={createAircraftIcon(color, isSelected)}
+            icon={createAircraftIcon(color, isSelected, point.headingDeg)}
           >
             <Popup>
               <strong>{flight.callsign || flight.flight_id}</strong>
@@ -378,6 +473,8 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
               Speed:{" "}
               {point.groundspeed_kt ? Math.round(point.groundspeed_kt) : "N/A"} kt
               <br />
+              Heading: {point.headingDeg ? Math.round(point.headingDeg) : "N/A"}°
+              <br />
               Time: {point.timestamp}
             </Popup>
           </Marker>
@@ -385,6 +482,18 @@ function FlightMap({ selectedFlight, flights, visibleTrajectories }) {
 
         <FitBounds allPositions={allPositions} />
       </MapContainer>
+    </div>
+  )
+}
+
+function LegendItem({ color, label }) {
+  return (
+    <div className="mb-1 flex items-center gap-2">
+      <span
+        className="h-2.5 w-2.5 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+      <span className="text-slate-400">{label}</span>
     </div>
   )
 }
