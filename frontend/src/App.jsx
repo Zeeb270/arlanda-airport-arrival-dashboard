@@ -388,32 +388,52 @@ function App() {
     {
       id: "overview",
       label: "Mission Overview",
+      icon: "🛰️",
+      accent: "cyan",
       description: "Dataset scope, KPIs, and headline analytics",
+      preview: `${summary?.n_flights?.toLocaleString() || 0} flights · ${summary?.total_points?.toLocaleString() || 0} points`,
     },
     {
       id: "flight-explorer",
       label: "Flight Explorer",
+      icon: "✈️",
+      accent: "emerald",
       description: "Search, filter, map, and compare arrival flights",
+      preview: `${filteredFlights.length.toLocaleString()} visible flights`,
     },
     {
       id: "trajectory-weather",
       label: "Trajectory & Weather",
+      icon: "📈",
+      accent: "sky",
       description: "Altitude, speed, vertical rate, and weather context",
+      preview: selectedFlight
+        ? `${selectedFlight.callsign || "Selected flight"} · ${selectedFlight.descent_class || "No class"}`
+        : "Select a flight",
     },
     {
       id: "traffic-flow",
       label: "Traffic Flow",
+      icon: "🛬",
+      accent: "amber",
       description: "Scenario analysis by date, hour, runway, and arrival mix",
+      preview: `${scenarioSummary.nFlights.toLocaleString()} scenario flights`,
     },
     {
       id: "optimization",
       label: "Optimization Lab",
+      icon: "🎯",
+      accent: "fuchsia",
       description: "Candidate ranking, CDO simulation, and sensitivity testing",
+      preview: `${Math.round(cdoSimulation?.summary?.co2_saving_kg || 0).toLocaleString()} kg CO₂ saving`,
     },
     {
       id: "research-ai",
-      label: "Research & LLM Integration",
+      label: "Research & LLM Q&A",
+      icon: "🧠",
+      accent: "violet",
       description: "AI explanations, methodology, assumptions, and limitations",
+      preview: "Assistant + methodology",
     },
   ]
 
@@ -1841,27 +1861,98 @@ function ScenarioTopFlightsCard({ flights }) {
 }
 
 function DashboardTabs({ tabs, activeTab, onChange }) {
+  const accentStyles = {
+    cyan: {
+      active: "border-cyan-400 bg-cyan-500/10 text-cyan-100 shadow-cyan-950/40",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-200",
+      icon: "bg-cyan-500/10 text-cyan-300 border-cyan-400/30",
+      preview: "text-cyan-300",
+    },
+    emerald: {
+      active: "border-emerald-400 bg-emerald-500/10 text-emerald-100 shadow-emerald-950/40",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-200",
+      icon: "bg-emerald-500/10 text-emerald-300 border-emerald-400/30",
+      preview: "text-emerald-300",
+    },
+    sky: {
+      active: "border-sky-400 bg-sky-500/10 text-sky-100 shadow-sky-950/40",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-sky-500/50 hover:text-sky-200",
+      icon: "bg-sky-500/10 text-sky-300 border-sky-400/30",
+      preview: "text-sky-300",
+    },
+    amber: {
+      active: "border-amber-400 bg-amber-500/10 text-amber-100 shadow-amber-950/40",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-amber-500/50 hover:text-amber-200",
+      icon: "bg-amber-500/10 text-amber-300 border-amber-400/30",
+      preview: "text-amber-300",
+    },
+    fuchsia: {
+      active: "border-fuchsia-400 bg-fuchsia-500/10 text-fuchsia-100 shadow-fuchsia-950/40",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-fuchsia-500/50 hover:text-fuchsia-200",
+      icon: "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-400/30",
+      preview: "text-fuchsia-300",
+    },
+    violet: {
+      active: "border-violet-400 bg-violet-500/10 text-violet-100 shadow-violet-950/40",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-violet-500/50 hover:text-violet-200",
+      icon: "bg-violet-500/10 text-violet-300 border-violet-400/30",
+      preview: "text-violet-300",
+    },
+  }
+
   return (
-    <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-      <div className="flex gap-2 overflow-x-auto pb-1">
+    <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="mb-3 flex flex-col gap-1">
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+          Dashboard Modules
+        </p>
+        <h2 className="text-lg font-semibold text-slate-100">
+          Select a research workspace
+        </h2>
+        <p className="text-sm text-slate-400">
+          Navigate from dataset overview to flight inspection, traffic-flow analysis, optimization, and research interpretation.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab
+          const styles = accentStyles[tab.accent] || accentStyles.cyan
 
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`min-w-fit rounded-xl border px-4 py-3 text-left transition ${
-                isActive
-                  ? "border-cyan-400 bg-cyan-500/10 text-cyan-200"
-                  : "border-slate-800 bg-slate-950 text-slate-400 hover:border-cyan-500/50 hover:text-slate-200"
+              className={`group rounded-2xl border p-4 text-left shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:shadow-xl ${
+                isActive ? styles.active : styles.inactive
               }`}
             >
-              <p className="text-sm font-medium">{tab.label}</p>
-              <p className="mt-1 hidden max-w-[220px] text-xs text-slate-500 xl:block">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg ${styles.icon}`}
+                >
+                  {tab.icon}
+                </span>
+
+                {isActive && (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-300">
+                    Active
+                  </span>
+                )}
+              </div>
+
+              <p className="text-sm font-semibold">{tab.label}</p>
+
+              <p className="mt-2 min-h-[38px] text-xs leading-5 text-slate-400">
                 {tab.description}
               </p>
+
+              <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2">
+                <p className={`text-xs font-medium ${styles.preview}`}>
+                  {tab.preview}
+                </p>
+              </div>
             </button>
           )
         })}
