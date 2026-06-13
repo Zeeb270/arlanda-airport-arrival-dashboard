@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   getAnalyticsSummary,
+  getCdoSensitivity,
   getCdoSimulation,
   getFlights,
   getOptimizationCandidates,
@@ -114,6 +115,7 @@ function App() {
   const [analytics, setAnalytics] = useState(null)
   const [optimizationCandidates, setOptimizationCandidates] = useState(null)
   const [cdoSimulation, setCdoSimulation] = useState(null)
+  const [cdoSensitivity, setCdoSensitivity] = useState(null)
   const [flights, setFlights] = useState([])
   const [selectedFlightId, setSelectedFlightId] = useState(null)
   const [selectedTrajectory, setSelectedTrajectory] = useState([])
@@ -137,11 +139,12 @@ function App() {
         setLoading(true)
         setError("")
 
-        const [summaryData, analyticsData, candidatesData, cdoData, flightsData] = await Promise.all([
+        const [summaryData, analyticsData, candidatesData, cdoData, sensitivityData, flightsData] = await Promise.all([
           getSummary(),
           getAnalyticsSummary(),
           getOptimizationCandidates(25),
           getCdoSimulation(25),
+          getCdoSensitivity(),
           getFlights(),
         ])
 
@@ -149,6 +152,7 @@ function App() {
         setAnalytics(analyticsData)
         setOptimizationCandidates(candidatesData)
         setCdoSimulation(cdoData)
+        setCdoSensitivity(sensitivityData)
         setFlights(flightsData)
 
         if (flightsData.length > 0) {
@@ -501,6 +505,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           onSelectFlight={setSelectedFlightId}
         />
 
+        <CdoSensitivityPanel data={cdoSensitivity} />
 
         <TrafficScenarioPanel
           dateFilter={dateFilter}
@@ -1232,6 +1237,136 @@ function SimulationMetric({ label, value }) {
     <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-emerald-300">{value}</p>
+    </div>
+  )
+}
+
+function CdoSensitivityPanel({ data }) {
+  const method = data?.method
+  const scenarios = data?.scenarios || []
+  const range = data?.sensitivity_range
+
+  if (!data) {
+    return (
+      <section className="col-span-12 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
+        <h2 className="text-lg font-semibold text-slate-100">
+          CDO Sensitivity Analysis
+        </h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Sensitivity data is not available.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            CDO Sensitivity Analysis
+          </h2>
+          <p className="text-sm text-slate-400">
+            Conservative, baseline, and optimistic assumptions for reduced level-off fuel savings.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
+          Assumption robustness
+        </span>
+      </div>
+
+      {range && (
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <SensitivityMetric
+            label="Fuel saving range"
+            value={`${Math.round(range.fuel_saving_min_kg).toLocaleString()}–${Math.round(range.fuel_saving_max_kg).toLocaleString()} kg`}
+          />
+          <SensitivityMetric
+            label="CO₂ saving range"
+            value={`${Math.round(range.co2_saving_min_kg).toLocaleString()}–${Math.round(range.co2_saving_max_kg).toLocaleString()} kg`}
+          />
+          <SensitivityMetric
+            label="Scenarios tested"
+            value={scenarios.length}
+          />
+          <SensitivityMetric
+            label="Robustness check"
+            value="3 assumptions"
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        {scenarios.map((scenario) => (
+          <div
+            key={scenario.scenario_name}
+            className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+          >
+            <div className="mb-3">
+              <h3 className="text-lg font-semibold text-sky-300">
+                {scenario.scenario_name}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {scenario.saving_percent_per_level_off}% per reduced level-off · max {scenario.max_saving_percent}% per flight
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <CandidateMetric
+                label="Affected flights"
+                value={`${scenario.affected_flights} / ${scenario.total_flights}`}
+              />
+              <CandidateMetric
+                label="Fuel saving"
+                value={`${Math.round(scenario.fuel_saving_kg).toLocaleString()} kg`}
+              />
+              <CandidateMetric
+                label="Fuel reduction"
+                value={`${scenario.fuel_saving_percent}%`}
+              />
+              <CandidateMetric
+                label="CO₂ saving"
+                value={`${Math.round(scenario.co2_saving_kg).toLocaleString()} kg`}
+              />
+              <CandidateMetric
+                label="CO₂ reduction"
+                value={`${scenario.co2_saving_percent}%`}
+              />
+              <CandidateMetric
+                label="Optimized CO₂"
+                value={`${Math.round(scenario.optimized_co2_kg).toLocaleString()} kg`}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {method && (
+        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <h3 className="text-sm font-medium text-slate-100">
+            Sensitivity Method
+          </h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            {method.description}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            Purpose: {method.purpose}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-amber-300">
+            Limitation: {method.limitations}
+          </p>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function SensitivityMetric({ label, value }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-sky-300">{value}</p>
     </div>
   )
 }

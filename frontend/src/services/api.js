@@ -26,6 +26,10 @@ export function getCdoSimulation(limit = 25) {
   return request(`/api/optimization/cdo-simulation?limit=${limit}`)
 }
 
+export function getCdoSensitivity() {
+  return request("/api/optimization/cdo-sensitivity")
+}
+
 export function getFlights() {
   return request("/api/flights")
 }

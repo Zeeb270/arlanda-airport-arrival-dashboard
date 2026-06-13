@@ -330,3 +330,119 @@ def load_cdo_improvement_simulation(limit: int = 25) -> Dict[str, Any]:
         },
         "top_flight_savings": affected_flights[:limit],
     }
+
+def summarize_cdo_scenario(
+    scenario_name: str,
+    saving_percent_per_level_off: float,
+    max_saving_percent: float,
+) -> Dict[str, Any]:
+    flights = load_flights()
+
+    simulated_flights = [
+        estimate_cdo_improvement_for_flight(
+            flight=flight,
+            saving_percent_per_level_off=saving_percent_per_level_off,
+            max_saving_percent=max_saving_percent,
+        )
+        for flight in flights
+        if flight.get("flight_id") is not None
+    ]
+
+    baseline_fuel_total = sum(row["baseline_fuel_kg"] for row in simulated_flights)
+    optimized_fuel_total = sum(row["optimized_fuel_kg"] for row in simulated_flights)
+    fuel_saving_total = sum(row["fuel_saving_kg"] for row in simulated_flights)
+
+    baseline_co2_total = sum(row["baseline_co2_kg"] for row in simulated_flights)
+    optimized_co2_total = sum(row["optimized_co2_kg"] for row in simulated_flights)
+    co2_saving_total = sum(row["co2_saving_kg"] for row in simulated_flights)
+
+    affected_flights = [
+        row
+        for row in simulated_flights
+        if row["reducible_level_offs"] > 0 and row["fuel_saving_kg"] > 0
+    ]
+
+    fuel_saving_percent = (
+        (fuel_saving_total / baseline_fuel_total) * 100
+        if baseline_fuel_total > 0
+        else 0.0
+    )
+
+    co2_saving_percent = (
+        (co2_saving_total / baseline_co2_total) * 100
+        if baseline_co2_total > 0
+        else 0.0
+    )
+
+    return {
+        "scenario_name": scenario_name,
+        "saving_percent_per_level_off": round(saving_percent_per_level_off * 100, 2),
+        "max_saving_percent": round(max_saving_percent * 100, 2),
+        "total_flights": len(simulated_flights),
+        "affected_flights": len(affected_flights),
+        "baseline_fuel_kg": round(baseline_fuel_total, 2),
+        "optimized_fuel_kg": round(optimized_fuel_total, 2),
+        "fuel_saving_kg": round(fuel_saving_total, 2),
+        "fuel_saving_percent": round(fuel_saving_percent, 2),
+        "baseline_co2_kg": round(baseline_co2_total, 2),
+        "optimized_co2_kg": round(optimized_co2_total, 2),
+        "co2_saving_kg": round(co2_saving_total, 2),
+        "co2_saving_percent": round(co2_saving_percent, 2),
+    }
+
+
+def load_cdo_sensitivity_analysis() -> Dict[str, Any]:
+    scenarios = [
+        {
+            "scenario_name": "Conservative",
+            "saving_percent_per_level_off": 0.01,
+            "max_saving_percent": 0.05,
+        },
+        {
+            "scenario_name": "Baseline",
+            "saving_percent_per_level_off": 0.02,
+            "max_saving_percent": 0.08,
+        },
+        {
+            "scenario_name": "Optimistic",
+            "saving_percent_per_level_off": 0.03,
+            "max_saving_percent": 0.10,
+        },
+    ]
+
+    results = [
+        summarize_cdo_scenario(
+            scenario_name=scenario["scenario_name"],
+            saving_percent_per_level_off=scenario["saving_percent_per_level_off"],
+            max_saving_percent=scenario["max_saving_percent"],
+        )
+        for scenario in scenarios
+    ]
+
+    co2_savings = [row["co2_saving_kg"] for row in results]
+    fuel_savings = [row["fuel_saving_kg"] for row in results]
+
+    return {
+        "method": {
+            "name": "CDO sensitivity analysis",
+            "description": (
+                "This analysis tests how estimated CDO-improvement benefits change under conservative, "
+                "baseline, and optimistic assumptions for fuel saving per reduced level-off."
+            ),
+            "purpose": (
+                "The purpose is to evaluate whether the environmental conclusions are robust to uncertainty "
+                "in the simplified CDO-improvement assumptions."
+            ),
+            "limitations": (
+                "This sensitivity analysis still does not model aircraft mass variation, wind aloft, "
+                "controller instructions, separation constraints, runway capacity, or full trajectory optimization."
+            ),
+        },
+        "sensitivity_range": {
+            "fuel_saving_min_kg": round(min(fuel_savings), 2) if fuel_savings else 0.0,
+            "fuel_saving_max_kg": round(max(fuel_savings), 2) if fuel_savings else 0.0,
+            "co2_saving_min_kg": round(min(co2_savings), 2) if co2_savings else 0.0,
+            "co2_saving_max_kg": round(max(co2_savings), 2) if co2_savings else 0.0,
+        },
+        "scenarios": results,
+    }
