@@ -133,6 +133,7 @@ function App() {
   const [minEfficiency, setMinEfficiency] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [activeTab, setActiveTab] = useState("overview")
 
   useEffect(() => {
     async function loadData() {
@@ -383,6 +384,39 @@ function App() {
     return flights.find((flight) => flight.flight_id === selectedFlightId) || null
   }, [flights, selectedFlightId])
 
+  const dashboardTabs = [
+    {
+      id: "overview",
+      label: "Mission Overview",
+      description: "Dataset scope, KPIs, and headline analytics",
+    },
+    {
+      id: "flight-explorer",
+      label: "Flight Explorer",
+      description: "Search, filter, map, and compare arrival flights",
+    },
+    {
+      id: "trajectory-weather",
+      label: "Trajectory & Weather",
+      description: "Altitude, speed, vertical rate, and weather context",
+    },
+    {
+      id: "traffic-flow",
+      label: "Traffic Flow",
+      description: "Scenario analysis by date, hour, runway, and arrival mix",
+    },
+    {
+      id: "optimization",
+      label: "Optimization Lab",
+      description: "Candidate ranking, CDO simulation, and sensitivity testing",
+    },
+    {
+      id: "research-ai",
+      label: "Research & LLM Integration",
+      description: "AI explanations, methodology, assumptions, and limitations",
+    },
+  ]
+
   useEffect(() => {
     if (filteredFlights.length === 0) {
       setSelectedFlightId(null)
@@ -494,33 +528,48 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             </div>
           </div>
         </section>
-        <DatasetAnalytics analytics={analytics} />
-
-        <OptimizationCandidatesPanel
-          data={optimizationCandidates}
-          onSelectFlight={setSelectedFlightId}
+        <DashboardTabs
+          tabs={dashboardTabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
         />
 
-        <CdoSimulationPanel
-          data={cdoSimulation}
-          onSelectFlight={setSelectedFlightId}
-        />
+        {activeTab === "overview" && (
+          <DatasetAnalytics analytics={analytics} />
+        )}
 
-        <CdoSensitivityPanel data={cdoSensitivity} />
+        {activeTab === "optimization" && (
+          <>
+            <OptimizationCandidatesPanel
+              data={optimizationCandidates}
+              onSelectFlight={setSelectedFlightId}
+            />
 
-        <AviationAssistantPanel />
-        <TrafficScenarioPanel
-          dateFilter={dateFilter}
-          setDateFilter={setDateFilter}
-          hourFilter={hourFilter}
-          setHourFilter={setHourFilter}
-          runwayFilter={runwayFilter}
-          setRunwayFilter={setRunwayFilter}
-          dateOptions={dateOptions}
-          hourOptions={hourOptions}
-          runwayOptions={runwayOptions}
-          summary={scenarioSummary}
-        />
+            <CdoSimulationPanel
+              data={cdoSimulation}
+              onSelectFlight={setSelectedFlightId}
+            />
+
+            <CdoSensitivityPanel data={cdoSensitivity} />
+          </>
+        )}
+        {activeTab === "research-ai" && <AviationAssistantPanel />}
+        {activeTab === "traffic-flow" && (
+          <TrafficScenarioPanel
+            dateFilter={dateFilter}
+            setDateFilter={setDateFilter}
+            hourFilter={hourFilter}
+            setHourFilter={setHourFilter}
+            runwayFilter={runwayFilter}
+            setRunwayFilter={setRunwayFilter}
+            dateOptions={dateOptions}
+            hourOptions={hourOptions}
+            runwayOptions={runwayOptions}
+            summary={scenarioSummary}
+          />
+        )}
+        {activeTab === "flight-explorer" && (
+        <>
         <aside className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Flight Selector</h2>
@@ -868,7 +917,10 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             </div>
           )}
         </aside>
+          </>
+        )}
 
+      {activeTab === "trajectory-weather" && (
         <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -884,6 +936,9 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
           <TrajectoryCharts trajectory={selectedTrajectory} />
         </section>
+      )}
+
+      {activeTab === "flight-explorer" && (
         <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -903,6 +958,9 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             onSelectFlight={setSelectedFlightId}
           />
         </section>
+      )}
+
+      {activeTab === "research-ai" && (
         <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
@@ -918,6 +976,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
           <MethodologyPanel />
         </section>
+      )}
 
 
       </main>
@@ -1778,6 +1837,36 @@ function ScenarioTopFlightsCard({ flights }) {
         </div>
       )}
     </div>
+  )
+}
+
+function DashboardTabs({ tabs, activeTab, onChange }) {
+  return (
+    <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTab
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={`min-w-fit rounded-xl border px-4 py-3 text-left transition ${
+                isActive
+                  ? "border-cyan-400 bg-cyan-500/10 text-cyan-200"
+                  : "border-slate-800 bg-slate-950 text-slate-400 hover:border-cyan-500/50 hover:text-slate-200"
+              }`}
+            >
+              <p className="text-sm font-medium">{tab.label}</p>
+              <p className="mt-1 hidden max-w-[220px] text-xs text-slate-500 xl:block">
+                {tab.description}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
