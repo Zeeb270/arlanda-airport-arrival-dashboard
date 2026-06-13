@@ -134,6 +134,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState("overview")
+  const [activeOptimizationTab, setActiveOptimizationTab] = useState("candidates")
 
   useEffect(() => {
     async function loadData() {
@@ -437,6 +438,24 @@ function App() {
     },
   ]
 
+  const optimizationTabs = [
+    {
+      id: "candidates",
+      label: "Candidates",
+      description: "Ranked arrivals with strongest improvement potential",
+    },
+    {
+      id: "cdo-scenario",
+      label: "CDO Scenario",
+      description: "Baseline versus improved CDO-style simulation",
+    },
+    {
+      id: "sensitivity",
+      label: "Sensitivity",
+      description: "Conservative, baseline, and optimistic assumptions",
+    },
+  ]
+
   useEffect(() => {
     if (filteredFlights.length === 0) {
       setSelectedFlightId(null)
@@ -560,19 +579,34 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
         {activeTab === "optimization" && (
           <>
-            <OptimizationCandidatesPanel
-              data={optimizationCandidates}
-              onSelectFlight={setSelectedFlightId}
+            <SubTabs
+              tabs={optimizationTabs}
+              activeTab={activeOptimizationTab}
+              onChange={setActiveOptimizationTab}
+              tone="fuchsia"
             />
 
-            <CdoSimulationPanel
-              data={cdoSimulation}
-              onSelectFlight={setSelectedFlightId}
-            />
+            {activeOptimizationTab === "candidates" && (
+              <OptimizationCandidatesPanel
+                data={optimizationCandidates}
+                onSelectFlight={setSelectedFlightId}
+              />
+            )}
 
-            <CdoSensitivityPanel data={cdoSensitivity} />
+            {activeOptimizationTab === "cdo-scenario" && (
+              <CdoSimulationPanel
+                data={cdoSimulation}
+                onSelectFlight={setSelectedFlightId}
+              />
+            )}
+
+            {activeOptimizationTab === "sensitivity" && (
+              <CdoSensitivityPanel data={cdoSensitivity} />
+            )}
           </>
         )}
+
+
         {activeTab === "research-ai" && <AviationAssistantPanel />}
         {activeTab === "traffic-flow" && (
           <TrafficScenarioPanel
@@ -1857,6 +1891,77 @@ function ScenarioTopFlightsCard({ flights }) {
         </div>
       )}
     </div>
+  )
+}
+
+function SubTabs({ tabs, activeTab, onChange, tone = "fuchsia" }) {
+  const toneStyles = {
+    fuchsia: {
+      active: "border-fuchsia-400 bg-fuchsia-500/10 text-fuchsia-200",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-fuchsia-500/50 hover:text-fuchsia-200",
+      badge: "text-fuchsia-300",
+    },
+    emerald: {
+      active: "border-emerald-400 bg-emerald-500/10 text-emerald-200",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-emerald-500/50 hover:text-emerald-200",
+      badge: "text-emerald-300",
+    },
+    sky: {
+      active: "border-sky-400 bg-sky-500/10 text-sky-200",
+      inactive: "border-slate-800 bg-slate-950 text-slate-400 hover:border-sky-500/50 hover:text-sky-200",
+      badge: "text-sky-300",
+    },
+  }
+
+  const styles = toneStyles[tone] || toneStyles.fuchsia
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            Optimization Lab
+          </h2>
+          <p className="text-sm text-slate-400">
+            Explore candidate flights, CDO improvement scenarios, and sensitivity assumptions without expanding all analysis at once.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1 text-xs text-fuchsia-300">
+          Research experiment workspace
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {tabs.map((tab) => {
+          const selected = tab.id === activeTab
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={`rounded-xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                selected ? styles.active : styles.inactive
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">{tab.label}</p>
+                {selected && (
+                  <span className={`text-xs font-medium ${styles.badge}`}>
+                    Active
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {tab.description}
+              </p>
+            </button>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
