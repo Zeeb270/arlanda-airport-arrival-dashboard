@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { getAnalyticsSummary, getFlights, getSummary, getTrajectory } from "./services/api"
+import {
+  getAnalyticsSummary,
+  getFlights,
+  getOptimizationCandidates,
+  getSummary,
+  getTrajectory,
+} from "./services/api"
 import FlightMap from "./components/FlightMap"
 import TrajectoryCharts from "./components/TrajectoryCharts"
 import FlightComparison from "./components/FlightComparison"
@@ -105,6 +111,7 @@ function flightOverlapsSelected(candidateFlight, selectedFlight, windowMinutes) 
 function App() {
   const [summary, setSummary] = useState(null)
   const [analytics, setAnalytics] = useState(null)
+  const [optimizationCandidates, setOptimizationCandidates] = useState(null)
   const [flights, setFlights] = useState([])
   const [selectedFlightId, setSelectedFlightId] = useState(null)
   const [selectedTrajectory, setSelectedTrajectory] = useState([])
@@ -128,14 +135,16 @@ function App() {
         setLoading(true)
         setError("")
 
-        const [summaryData, analyticsData, flightsData] = await Promise.all([
+        const [summaryData, analyticsData, candidatesData, flightsData] = await Promise.all([
           getSummary(),
           getAnalyticsSummary(),
+          getOptimizationCandidates(25),
           getFlights(),
         ])
 
         setSummary(summaryData)
         setAnalytics(analyticsData)
+        setOptimizationCandidates(candidatesData)
         setFlights(flightsData)
 
         if (flightsData.length > 0) {
@@ -477,6 +486,12 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           </div>
         </section>
         <DatasetAnalytics analytics={analytics} />
+
+        <OptimizationCandidatesPanel
+          data={optimizationCandidates}
+          onSelectFlight={setSelectedFlightId}
+        />
+
         <TrafficScenarioPanel
           dateFilter={dateFilter}
           setDateFilter={setDateFilter}
@@ -915,6 +930,137 @@ function PageShell({ children }) {
     </div>
   )
 }
+
+function OptimizationCandidatesPanel({ data, onSelectFlight }) {
+  const candidates = data?.candidates || []
+  const method = data?.method
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            Optimization Candidates
+          </h2>
+          <p className="text-sm text-slate-400">
+            Ranked arrivals with the strongest indicators for CDO, sequencing, or environmental improvement analysis.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1 text-xs text-fuchsia-300">
+          Research prioritization
+        </span>
+      </div>
+
+      {candidates.length === 0 ? (
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+          No optimization candidates available.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {candidates.slice(0, 10).map((candidate, index) => (
+            <div
+              key={candidate.flight_id}
+              className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+            >
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Candidate #{index + 1}
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold text-fuchsia-300">
+                    {candidate.callsign || candidate.flight_id}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {candidate.aircraft_type || "N/A"} · RWY {candidate.arrival_runway || "N/A"} · {candidate.descent_class || "N/A"}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Priority</p>
+                  <p className="text-2xl font-semibold text-cyan-300">
+                    {candidate.priority_score}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                <CandidateMetric
+                  label="Efficiency"
+                  value={candidate.efficiency_score ?? "N/A"}
+                />
+                <CandidateMetric
+                  label="Level-offs"
+                  value={candidate.level_off_count ?? "N/A"}
+                />
+                <CandidateMetric
+                  label="CO₂"
+                  value={`${Math.round(Number(candidate.final_co2_kg || 0)).toLocaleString()} kg`}
+                />
+                <CandidateMetric
+                  label="Method"
+                  value={candidate.environmental_method || "N/A"}
+                />
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Reason for flag
+                </p>
+                <ul className="space-y-1 text-xs text-slate-300">
+                  {(candidate.reasons || []).map((reason) => (
+                    <li key={reason}>• {reason}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Suggested improvement direction
+                </p>
+                <p className="text-xs leading-5 text-slate-300">
+                  {candidate.suggested_improvement}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onSelectFlight(candidate.flight_id)}
+                className="mt-3 w-full rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-2 text-sm text-fuchsia-200 hover:border-fuchsia-300 hover:text-fuchsia-100"
+              >
+                Inspect this flight
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {method && (
+        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <h3 className="text-sm font-medium text-slate-100">
+            Candidate Scoring Method
+          </h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            {method.description}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-amber-300">
+            Limitation: {method.limitations}
+          </p>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function CandidateMetric({ label, value }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-2">
+      <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-xs font-medium text-slate-100">{value}</p>
+    </div>
+  )
+}
+
 function TrafficScenarioPanel({
   dateFilter,
   setDateFilter,

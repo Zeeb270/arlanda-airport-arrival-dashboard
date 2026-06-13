@@ -18,6 +18,10 @@ export function getAnalyticsSummary() {
   return request("/api/analytics/summary")
 }
 
+export function getOptimizationCandidates(limit = 25) {
+  return request(`/api/optimization/candidates?limit=${limit}`)
+}
+
 export function getFlights() {
   return request("/api/flights")
 }
