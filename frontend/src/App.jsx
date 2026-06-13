@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import {
+  askAssistant,
   getAnalyticsSummary,
   getCdoSensitivity,
   getCdoSimulation,
@@ -507,6 +508,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
         <CdoSensitivityPanel data={cdoSensitivity} />
 
+        <AviationAssistantPanel />
         <TrafficScenarioPanel
           dateFilter={dateFilter}
           setDateFilter={setDateFilter}
@@ -1368,6 +1370,157 @@ function SensitivityMetric({ label, value }) {
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-lg font-semibold text-sky-300">{value}</p>
     </div>
+  )
+}
+
+function AviationAssistantPanel() {
+  const suggestedQuestions = [
+    "Explain the dashboard results in simple terms.",
+    "Explain the CDO sensitivity analysis.",
+    "What are the main environmental impacts?",
+    "What are the main limitations of this prototype?",
+    "Write a supervisor-friendly research summary.",
+    "What optimization opportunities exist in the data?",
+  ]
+
+  const [question, setQuestion] = useState(suggestedQuestions[0])
+  const [answer, setAnswer] = useState("")
+  const [source, setSource] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  async function handleAsk(customQuestion = null) {
+    const finalQuestion = (customQuestion || question).trim()
+
+    if (!finalQuestion) {
+      setError("Please enter a question.")
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError("")
+      setAnswer("")
+      setSource("")
+
+      const result = await askAssistant(finalQuestion)
+
+      setAnswer(result.answer || "No answer returned.")
+      setSource(result.source || "")
+      setQuestion(finalQuestion)
+    } catch (err) {
+      setError(err.message || "Assistant request failed.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            AI Aviation Analytics Assistant
+          </h2>
+          <p className="text-sm text-slate-400">
+            Ask natural-language questions about the dashboard, CDO analysis, environmental impact, and research limitations.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-300">
+          LLM explanation layer
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 xl:col-span-1">
+          <label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">
+            Ask a question
+          </label>
+
+          <textarea
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            rows={5}
+            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+            placeholder="Ask about the dashboard results..."
+          />
+
+          <button
+            type="button"
+            onClick={() => handleAsk()}
+            disabled={loading}
+            className="mt-3 w-full rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-sm text-violet-200 hover:border-violet-300 hover:text-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Asking assistant..." : "Ask Assistant"}
+          </button>
+
+          {error && (
+            <p className="mt-3 rounded-lg border border-red-800 bg-red-950/40 p-3 text-xs text-red-200">
+              {error}
+            </p>
+          )}
+
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            The assistant explains backend-calculated dashboard metrics. It does not provide operational ATC instructions.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 xl:col-span-2">
+          <h3 className="text-sm font-medium text-slate-100">
+            Suggested questions
+          </h3>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {suggestedQuestions.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => handleAsk(item)}
+                disabled={loading}
+                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:border-violet-400 hover:text-violet-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 min-h-[180px] rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+            {loading ? (
+              <div className="flex h-full min-h-[150px] items-center justify-center">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
+                  <p className="text-sm text-slate-400">
+                    Generating dashboard explanation...
+                  </p>
+                </div>
+              </div>
+            ) : answer ? (
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Assistant answer
+                  </p>
+                  {source && (
+                    <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-400">
+                      Source: {source}
+                    </span>
+                  )}
+                </div>
+
+                <p className="whitespace-pre-line text-sm leading-6 text-slate-200">
+                  {answer}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm leading-6 text-slate-500">
+                Select a suggested question or type your own question to generate an explanation based on the dashboard data.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 

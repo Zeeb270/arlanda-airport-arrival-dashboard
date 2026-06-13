@@ -2,7 +2,8 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
+from pydantic import BaseModel
+from app.assistant import ask_dashboard_assistant
 from app.analytics import load_analytics_summary
 from app.optimization import (
     load_cdo_improvement_simulation,
@@ -48,6 +49,13 @@ def root():
         "docs": "/docs",
     }
 
+class AssistantQuestion(BaseModel):
+    question: str
+
+
+@app.post("/api/assistant/ask")
+def api_assistant_ask(payload: AssistantQuestion):
+    return ask_dashboard_assistant(payload.question)
 
 @app.get("/api/summary")
 def api_summary():

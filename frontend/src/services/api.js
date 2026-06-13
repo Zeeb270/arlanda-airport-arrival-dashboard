@@ -41,3 +41,19 @@ export function getFlight(flightId) {
 export function getTrajectory(flightId) {
   return request(`/api/flights/${flightId}/trajectory`)
 }
+
+export async function askAssistant(question) {
+  const response = await fetch(`${API_BASE_URL}/api/assistant/ask`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ question }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Assistant request failed: ${response.status} ${response.statusText}`)
+  }
+
+  return response.json()
+}
