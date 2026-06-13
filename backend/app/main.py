@@ -4,7 +4,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.analytics import load_analytics_summary
-from app.optimization import load_optimization_candidates
+from app.optimization import (
+    load_cdo_improvement_simulation,
+    load_optimization_candidates,
+)
 from app.data_loader import (
     get_flight_by_id,
     get_trajectory_by_flight_id,
@@ -63,6 +66,13 @@ def api_analytics_summary():
 def api_optimization_candidates(limit: int = 25):
     try:
         return load_optimization_candidates(limit=limit)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=500, detail=str(error))
+
+@app.get("/api/optimization/cdo-simulation")
+def api_cdo_improvement_simulation(limit: int = 25):
+    try:
+        return load_cdo_improvement_simulation(limit=limit)
     except FileNotFoundError as error:
         raise HTTPException(status_code=500, detail=str(error))
 

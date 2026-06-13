@@ -201,3 +201,132 @@ def load_optimization_candidates(limit: int = 25) -> Dict[str, Any]:
         "returned_candidates": len(top_candidates),
         "candidates": top_candidates,
     }
+
+def estimate_cdo_improvement_for_flight(
+    flight: Dict[str, Any],
+    saving_percent_per_level_off: float = 0.02,
+    max_saving_percent: float = 0.08,
+) -> Dict[str, Any]:
+    baseline_fuel = safe_float(flight.get("final_fuel_kg"))
+    baseline_co2 = safe_float(flight.get("final_co2_kg"))
+    level_off_count = int(safe_float(flight.get("level_off_count")))
+    descent_class = flight.get("descent_class")
+
+    if baseline_co2 <= 0 and baseline_fuel > 0:
+        baseline_co2 = baseline_fuel * 3.16
+
+    if descent_class == "Interrupted descent":
+        reducible_level_offs = min(level_off_count, 2)
+        strategy = "Reduce interrupted descent level-offs"
+    elif descent_class == "Partial CDO":
+        reducible_level_offs = min(level_off_count, 1)
+        strategy = "Improve partial CDO continuity"
+    else:
+        reducible_level_offs = 0
+        strategy = "No CDO improvement applied"
+
+    saving_percent = min(
+        reducible_level_offs * saving_percent_per_level_off,
+        max_saving_percent,
+    )
+
+    fuel_saving = baseline_fuel * saving_percent
+    co2_saving = fuel_saving * 3.16
+
+    optimized_fuel = max(baseline_fuel - fuel_saving, 0.0)
+    optimized_co2 = max(baseline_co2 - co2_saving, 0.0)
+
+    return {
+        "flight_id": flight.get("flight_id"),
+        "callsign": flight.get("callsign"),
+        "aircraft_type": flight.get("aircraft_type"),
+        "arrival_runway": flight.get("arrival_runway"),
+        "descent_class": descent_class,
+        "level_off_count": level_off_count,
+        "reducible_level_offs": reducible_level_offs,
+        "baseline_fuel_kg": round(baseline_fuel, 2),
+        "optimized_fuel_kg": round(optimized_fuel, 2),
+        "fuel_saving_kg": round(fuel_saving, 2),
+        "baseline_co2_kg": round(baseline_co2, 2),
+        "optimized_co2_kg": round(optimized_co2, 2),
+        "co2_saving_kg": round(co2_saving, 2),
+        "saving_percent": round(saving_percent * 100, 2),
+        "strategy": strategy,
+    }
+
+
+def load_cdo_improvement_simulation(limit: int = 25) -> Dict[str, Any]:
+    flights = load_flights()
+
+    simulated_flights = [
+        estimate_cdo_improvement_for_flight(flight)
+        for flight in flights
+        if flight.get("flight_id") is not None
+    ]
+
+    baseline_fuel_total = sum(row["baseline_fuel_kg"] for row in simulated_flights)
+    optimized_fuel_total = sum(row["optimized_fuel_kg"] for row in simulated_flights)
+    fuel_saving_total = sum(row["fuel_saving_kg"] for row in simulated_flights)
+
+    baseline_co2_total = sum(row["baseline_co2_kg"] for row in simulated_flights)
+    optimized_co2_total = sum(row["optimized_co2_kg"] for row in simulated_flights)
+    co2_saving_total = sum(row["co2_saving_kg"] for row in simulated_flights)
+
+    affected_flights = [
+        row
+        for row in simulated_flights
+        if row["reducible_level_offs"] > 0 and row["fuel_saving_kg"] > 0
+    ]
+
+    affected_flights = sorted(
+        affected_flights,
+        key=lambda row: row["co2_saving_kg"],
+        reverse=True,
+    )
+
+    fuel_saving_percent = (
+        (fuel_saving_total / baseline_fuel_total) * 100
+        if baseline_fuel_total > 0
+        else 0.0
+    )
+
+    co2_saving_percent = (
+        (co2_saving_total / baseline_co2_total) * 100
+        if baseline_co2_total > 0
+        else 0.0
+    )
+
+    return {
+        "method": {
+            "name": "Simplified CDO improvement simulation",
+            "description": (
+                "This simulation estimates potential fuel and CO₂ savings if interrupted and partial-CDO "
+                "arrivals reduce selected level-offs. It is a conservative research scenario, not an operational clearance model."
+            ),
+            "assumptions": [
+                "Interrupted descents may reduce up to 2 level-offs.",
+                "Partial CDO arrivals may reduce up to 1 level-off.",
+                "Each reduced level-off is assumed to save 2% of arrival fuel.",
+                "Maximum saving is capped at 8% per flight.",
+                "CO₂ saving is calculated as fuel saving multiplied by 3.16.",
+                "CDO-like flights are not modified.",
+            ],
+            "limitations": (
+                "The simulation does not model separation, runway capacity, pilot instructions, wind aloft, "
+                "or full aircraft energy management. It estimates potential improvement magnitude for research screening."
+            ),
+        },
+        "summary": {
+            "total_flights": len(simulated_flights),
+            "affected_flights": len(affected_flights),
+            "baseline_fuel_kg": round(baseline_fuel_total, 2),
+            "optimized_fuel_kg": round(optimized_fuel_total, 2),
+            "fuel_saving_kg": round(fuel_saving_total, 2),
+            "fuel_saving_percent": round(fuel_saving_percent, 2),
+            "baseline_co2_kg": round(baseline_co2_total, 2),
+            "optimized_co2_kg": round(optimized_co2_total, 2),
+            "co2_saving_kg": round(co2_saving_total, 2),
+            "co2_saving_percent": round(co2_saving_percent, 2),
+        },
+        "top_flight_savings": affected_flights[:limit],
+    }

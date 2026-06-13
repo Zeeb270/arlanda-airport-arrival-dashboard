@@ -22,6 +22,10 @@ export function getOptimizationCandidates(limit = 25) {
   return request(`/api/optimization/candidates?limit=${limit}`)
 }
 
+export function getCdoSimulation(limit = 25) {
+  return request(`/api/optimization/cdo-simulation?limit=${limit}`)
+}
+
 export function getFlights() {
   return request("/api/flights")
 }

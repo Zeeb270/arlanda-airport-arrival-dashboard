@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   getAnalyticsSummary,
+  getCdoSimulation,
   getFlights,
   getOptimizationCandidates,
   getSummary,
@@ -112,6 +113,7 @@ function App() {
   const [summary, setSummary] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [optimizationCandidates, setOptimizationCandidates] = useState(null)
+  const [cdoSimulation, setCdoSimulation] = useState(null)
   const [flights, setFlights] = useState([])
   const [selectedFlightId, setSelectedFlightId] = useState(null)
   const [selectedTrajectory, setSelectedTrajectory] = useState([])
@@ -135,16 +137,18 @@ function App() {
         setLoading(true)
         setError("")
 
-        const [summaryData, analyticsData, candidatesData, flightsData] = await Promise.all([
+        const [summaryData, analyticsData, candidatesData, cdoData, flightsData] = await Promise.all([
           getSummary(),
           getAnalyticsSummary(),
           getOptimizationCandidates(25),
+          getCdoSimulation(25),
           getFlights(),
         ])
 
         setSummary(summaryData)
         setAnalytics(analyticsData)
         setOptimizationCandidates(candidatesData)
+        setCdoSimulation(cdoData)
         setFlights(flightsData)
 
         if (flightsData.length > 0) {
@@ -491,6 +495,12 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           data={optimizationCandidates}
           onSelectFlight={setSelectedFlightId}
         />
+
+        <CdoSimulationPanel
+          data={cdoSimulation}
+          onSelectFlight={setSelectedFlightId}
+        />
+
 
         <TrafficScenarioPanel
           dateFilter={dateFilter}
@@ -1057,6 +1067,171 @@ function CandidateMetric({ label, value }) {
     <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-2">
       <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 truncate text-xs font-medium text-slate-100">{value}</p>
+    </div>
+  )
+}
+
+function CdoSimulationPanel({ data, onSelectFlight }) {
+  const summary = data?.summary
+  const method = data?.method
+  const topSavings = data?.top_flight_savings || []
+
+  if (!summary) {
+    return (
+      <section className="col-span-12 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <h2 className="text-lg font-semibold text-slate-100">
+          CDO Improvement Simulator
+        </h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Simulation data is not available.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            CDO Improvement Simulator
+          </h2>
+          <p className="text-sm text-slate-400">
+            Baseline versus simplified improved CDO-style scenario for arrivals with reducible level-offs.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+          Baseline vs improved scenario
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <SimulationMetric
+          label="Affected flights"
+          value={`${summary.affected_flights} / ${summary.total_flights}`}
+        />
+        <SimulationMetric
+          label="Fuel saving"
+          value={`${Math.round(summary.fuel_saving_kg).toLocaleString()} kg`}
+        />
+        <SimulationMetric
+          label="Fuel reduction"
+          value={`${summary.fuel_saving_percent}%`}
+        />
+        <SimulationMetric
+          label="CO₂ saving"
+          value={`${Math.round(summary.co2_saving_kg).toLocaleString()} kg`}
+        />
+        <SimulationMetric
+          label="CO₂ reduction"
+          value={`${summary.co2_saving_percent}%`}
+        />
+        <SimulationMetric
+          label="Optimized CO₂"
+          value={`${Math.round(summary.optimized_co2_kg).toLocaleString()} kg`}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <h3 className="font-medium text-slate-100">Scenario Method</h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            {method?.description}
+          </p>
+
+          <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+              Assumptions
+            </p>
+            <ul className="space-y-1 text-xs leading-5 text-slate-300">
+              {(method?.assumptions || []).map((assumption) => (
+                <li key={assumption}>• {assumption}</li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-amber-300">
+            Limitation: {method?.limitations}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <h3 className="font-medium text-slate-100">Top CO₂ Saving Flights</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Flights with the largest estimated saving under the simplified CDO-improvement scenario.
+          </p>
+
+          {topSavings.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">
+              No reducible level-off candidates found.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {topSavings.slice(0, 8).map((flight, index) => (
+                <div
+                  key={flight.flight_id}
+                  className="rounded-lg border border-slate-800 bg-slate-900/70 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-300">
+                        {index + 1}. {flight.callsign || flight.flight_id}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {flight.aircraft_type || "N/A"} · RWY {flight.arrival_runway || "N/A"} · {flight.descent_class || "N/A"}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">CO₂ saving</p>
+                      <p className="text-sm font-semibold text-cyan-300">
+                        {Math.round(flight.co2_saving_kg).toLocaleString()} kg
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                    <CandidateMetric
+                      label="Level-offs cut"
+                      value={flight.reducible_level_offs}
+                    />
+                    <CandidateMetric
+                      label="Fuel saving"
+                      value={`${Math.round(flight.fuel_saving_kg).toLocaleString()} kg`}
+                    />
+                    <CandidateMetric
+                      label="Saving"
+                      value={`${flight.saving_percent}%`}
+                    />
+                    <CandidateMetric
+                      label="Strategy"
+                      value={flight.strategy}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onSelectFlight(flight.flight_id)}
+                    className="mt-3 w-full rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 hover:border-emerald-300 hover:text-emerald-100"
+                  >
+                    Inspect this flight
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function SimulationMetric({ label, value }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-emerald-300">{value}</p>
     </div>
   )
 }
