@@ -233,3 +233,236 @@ React + Vite Dashboard
     ↓
 LLM-Assisted Analytics Assistant
 ```
+---
+
+## System Architecture
+
+The implemented system uses a backend/frontend architecture.
+
+```text
+ADS-B Dataset
+    ↓
+Python Data Processing
+    ↓
+Processed Flight Summary + Trajectory Outputs
+    ↓
+FastAPI Backend
+    ↓
+React + Vite Dashboard
+    ↓
+LLM-Assisted Analytics Assistant
+```
+
+### Architecture Diagram
+
+A future architecture figure can be added here:
+
+```markdown
+![System Architecture](docs/images/system-architecture.png)
+```
+
+Recommended diagram content:
+
+```text
+SCAT ADS-B Dataset
+→ Python Processing Pipeline
+→ OpenAP + Fallback Environmental Estimation
+→ Processed Flight and Trajectory Outputs
+→ FastAPI Backend
+→ React Dashboard
+→ LLM Q&A Assistant
+```
+
+For now, the implemented pipeline is represented below:
+
+```text
++-----------------------------+
+| SCAT ADS-B Dataset          |
+| scat20170107_20170113.zip   |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| Data Processing Pipeline    |
+| Filtering, reconstruction,  |
+| feature generation          |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| Environmental Modelling     |
+| OpenAP + fallback proxy     |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| FastAPI Backend             |
+| Summary, flights,           |
+| trajectories, scenarios     |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| React Dashboard             |
+| Map, charts, analytics,     |
+| weather, optimization       |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+| LLM Assistant               |
+| Research explanation layer  |
++-----------------------------+
+```
+
+---
+
+## Dashboard Features
+
+The dashboard is divided into six research workspaces.
+
+### 1. Mission Overview
+
+Provides a high-level summary of the dataset and key research indicators.
+
+Includes:
+
+- number of flights,
+- trajectory point count,
+- average efficiency score,
+- total fuel estimate,
+- total CO₂ estimate,
+- OpenAP coverage,
+- research prototype status.
+
+### 2. Flight Explorer
+
+Allows interactive flight-level inspection.
+
+Features:
+
+- horizontal flight selector,
+- search and filter controls,
+- interactive trajectory map,
+- selected-flight metrics,
+- time-overlap traffic context,
+- paginated flight-comparison table.
+
+### 3. Trajectory & Weather
+
+Displays detailed flight-profile analysis for the selected arrival.
+
+Includes:
+
+- altitude profile,
+- speed profile,
+- vertical-rate profile,
+- CDO and level-off context,
+- surface weather metrics,
+- runway-relative wind component information.
+
+### 4. Traffic Flow
+
+Supports operational scenario filtering.
+
+Users can filter by:
+
+- date,
+- hour block,
+- runway.
+
+The tab summarizes:
+
+- runway mix,
+- descent mix,
+- OpenAP/fallback mix,
+- total fuel,
+- total CO₂,
+- high-emission flights,
+- selected-scenario arrival performance.
+
+### 5. Optimization Lab
+
+Provides research-oriented optimization analysis.
+
+Includes:
+
+- optimization candidate ranking,
+- simplified CDO improvement scenario,
+- CDO sensitivity analysis.
+
+The CDO scenario estimates potential fuel and CO₂ savings if selected level-offs could be reduced under simplified research assumptions.
+
+### 6. Research & LLM Q&A
+
+Provides final methodology documentation and an LLM-assisted explanation layer.
+
+Includes:
+
+- dataset definition,
+- processing pipeline,
+- environmental modelling notes,
+- analytical framework,
+- system architecture,
+- AI assistant limitations,
+- natural-language dashboard Q&A.
+
+---
+
+## Dashboard Screenshots
+
+The dashboard is organized into six research workspaces. Add final screenshots after deployment.
+
+### Mission Overview
+
+![Mission Overview](docs/images/mission-overview.png)
+
+### Flight Explorer
+
+![Flight Explorer](docs/images/flight-explorer.png)
+
+### Trajectory & Weather
+
+![Trajectory and Weather](docs/images/trajectory-weather.png)
+
+### Traffic Flow
+
+![Traffic Flow](docs/images/traffic-flow.png)
+
+### Optimization Lab
+
+![Optimization Lab](docs/images/optimization-lab.png)
+
+### Research & LLM Q&A
+
+![Research and LLM Q&A](docs/images/research-llm-qa.png)
+
+Recommended screenshot files:
+
+```text
+docs/images/mission-overview.png
+docs/images/flight-explorer.png
+docs/images/trajectory-weather.png
+docs/images/traffic-flow.png
+docs/images/optimization-lab.png
+docs/images/research-llm-qa.png
+```
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Data processing | Python |
+| Trajectory analysis | pandas, numerical processing |
+| Environmental modelling | OpenAP + fallback proxy estimation |
+| Backend API | FastAPI |
+| Frontend | React + Vite |
+| Styling | Tailwind CSS |
+| Mapping | Leaflet / OpenStreetMap |
+| Charts | Recharts |
+| Weather context | Weather API integration |
+| LLM assistant | Groq API with Llama model |
+| Frontend deployment | Vercel |
+| Backend deployment | Render |
