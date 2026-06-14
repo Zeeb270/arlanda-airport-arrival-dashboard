@@ -129,9 +129,9 @@ Raw SCAT ADS-B dataset
 → Exclude departure flights
 → Reconstruct arrival trajectories
 → Generate flight-level analytics dataset
-
+```
 ### Final Processed Dataset
-
+```text
 | Item | Value |
 |---|---:|
 | Airport | Stockholm Arlanda Airport / ESSA |
@@ -141,9 +141,9 @@ Raw SCAT ADS-B dataset
 | OpenAP estimates | 319 flights |
 | Fallback estimates | 88 flights |
 | Weather records | 192 hourly records |
-
+```
 ### Why This Dataset Was Chosen
-
+```text
 The SCAT ADS-B dataset was selected because it provides real aircraft trajectory data for the Stockholm region. This makes it suitable for aviation research involving:
 
 - arrival path reconstruction,
@@ -153,9 +153,9 @@ The SCAT ADS-B dataset was selected because it provides real aircraft trajectory
 - and dashboard-based trajectory visualization.
 
 The project focuses only on arrivals because arrival procedures are directly related to descent efficiency, level-off behaviour, runway sequencing, CDO analysis, and terminal-area emissions.
-
+```
 ### Dataset Limitations
-
+```text
 The dataset is suitable for research prototyping and exploratory analysis, but it has limitations:
 
 - it does not represent all possible ESSA operations,
@@ -163,17 +163,17 @@ The dataset is suitable for research prototyping and exploratory analysis, but i
 - aircraft mass and detailed airline operational data are not available,
 - weather is used as contextual information rather than full atmospheric modelling,
 - and environmental values are model-based estimates, not certified airline fuel records.
-
+```
 ### Citation Guidance
-
+```text
 Users of this repository should cite the original SCAT ADS-B dataset when reusing or discussing the data source.
 
 Recommended dataset citation format:
-
+```
 ```text
 SCAT ADS-B Dataset, Mendeley Data.
 Available at: https://data.mendeley.com/datasets/8yn985bwz5/1
-
+```
 ---
 
 ## Methodology Overview
@@ -214,3 +214,22 @@ Main stages:
 
 11. **LLM explanation layer**  
     Provide natural-language explanations of dashboard outputs, assumptions, limitations, and research methodology through the LLM Q&A assistant.
+---
+
+## System Architecture
+
+The implemented system uses a backend/frontend architecture.
+
+```text
+ADS-B Dataset
+    ↓
+Python Data Processing
+    ↓
+Processed Flight Summary + Trajectory Outputs
+    ↓
+FastAPI Backend
+    ↓
+React + Vite Dashboard
+    ↓
+LLM-Assisted Analytics Assistant
+```
