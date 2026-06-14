@@ -135,6 +135,7 @@ function App() {
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState("overview")
   const [activeOptimizationTab, setActiveOptimizationTab] = useState("candidates")
+  const [openResearchSection, setOpenResearchSection] = useState("methodology")
 
   useEffect(() => {
     async function loadData() {
@@ -842,21 +843,10 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
       )}
 
       {activeTab === "research-ai" && (
-        <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Methodology and Research Notes</h2>
-              <p className="text-sm text-slate-400">
-                How the dashboard converts raw flight JSON into arrival-efficiency and environmental indicators.
-              </p>
-            </div>
-            <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
-              Prototype assumptions
-            </span>
-          </div>
-
-          <MethodologyPanel />
-        </section>
+        <ResearchAccordionPanel
+          openSection={openResearchSection}
+          setOpenSection={setOpenResearchSection}
+        />
       )}
 
 
@@ -1327,14 +1317,361 @@ function SensitivityMetric({ label, value }) {
   )
 }
 
+function ResearchAccordionPanel({ openSection, setOpenSection }) {
+  const sections = [
+    {
+      id: "methodology",
+      title: "Final Methodology",
+      badge: "Implemented system",
+      description:
+        "Final research methodology used in the implemented ESSA arrival optimization dashboard.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            This research project investigates the environmental and operational
+            efficiency of arrival procedures at Stockholm Arlanda Airport (ESSA).
+            The implemented system uses real ADS-B trajectory data to reconstruct
+            arrival paths, evaluate descent behaviour, estimate fuel consumption
+            and CO₂ emissions, and identify flights with potential improvement
+            opportunities under simplified continuous descent operation
+            (CDO)-style assumptions.
+          </p>
+
+          <p>
+            The dashboard is implemented as a research-oriented air traffic
+            management analysis tool. It combines data ingestion, trajectory
+            processing, environmental modelling, arrival-flow analysis, scenario
+            testing, and interactive visualization. It is not intended to provide
+            operational ATC instructions or safety-critical decision support.
+          </p>
+
+          <p>
+            The final implementation focuses only on arrival flights to ESSA.
+            This scope was selected because arrival operations are directly
+            relevant to descent management, runway sequencing, CDO behaviour,
+            level-off analysis, and terminal-area environmental impact.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "dataset",
+      title: "Dataset Definition",
+      badge: "407 ESSA arrivals",
+      description:
+        "Dataset source, filtering logic, and final analysis subset.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            The final dataset was extracted from the SCAT ADS-B dataset published
+            on Mendeley. The file used in this project was
+            <span className="font-mono text-cyan-300"> scat20170107_20170113.zip</span>.
+            The source dataset contains ADS-B trajectory records for aircraft
+            operating in the Stockholm airspace region.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <CandidateMetric label="Source" value="Mendeley SCAT ADS-B" />
+            <CandidateMetric label="Airport" value="ESSA arrivals only" />
+            <CandidateMetric label="Final flights" value="407" />
+          </div>
+
+          <p>
+            The raw dataset was filtered to retain only flights arriving at
+            Stockholm Arlanda Airport. Departure flights were excluded because
+            departure operations involve different aircraft-performance phases,
+            climb profiles, fuel-burn behaviour, runway dependencies, and ATM
+            objectives. Keeping only arrivals ensured that the analysis remained
+            focused on descent efficiency, runway-arrival flow, and
+            CDO-style improvement potential.
+          </p>
+
+          <p>
+            The final processed dataset contains 407 arrival flights and 201,950
+            trajectory points. Each flight is represented by ADS-B position
+            time-series data and derived flight-level indicators used by the
+            dashboard.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "pipeline",
+      title: "Processing Pipeline",
+      badge: "ADS-B to dashboard",
+      description:
+        "How raw trajectory points were converted into flight-level analytical records.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            The processing pipeline begins by loading raw ADS-B trajectory
+            records from the selected SCAT dataset file. Records are grouped by
+            flight identifier, ordered chronologically, and reconstructed into
+            individual arrival trajectories.
+          </p>
+
+          <ol className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-slate-300">
+            <li>1. Load raw SCAT ADS-B trajectory records.</li>
+            <li>2. Filter records to retain ESSA arrival flights only.</li>
+            <li>3. Exclude departures and non-arrival movements.</li>
+            <li>4. Group trajectory points by flight identifier.</li>
+            <li>5. Sort points chronologically to reconstruct each arrival path.</li>
+            <li>6. Generate flight-level indicators for dashboard analysis.</li>
+            <li>7. Apply OpenAP-based or fallback environmental estimation.</li>
+            <li>8. Serve processed outputs through the FastAPI backend.</li>
+          </ol>
+
+          <p>
+            The reconstructed trajectories support map visualization, altitude
+            profile analysis, speed profile analysis, vertical-rate inspection,
+            descent classification, arrival-flow filtering, and environmental
+            comparison.
+          </p>
+
+          <p>
+            Missing or incomplete values were handled by retaining the flight
+            where possible and applying fallback logic for indicators that could
+            not be computed using the full modelling workflow. This allowed the
+            dashboard to preserve all 407 arrival flights while clearly separating
+            OpenAP-based estimates from fallback proxy estimates.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "environment",
+      title: "Environmental Modelling",
+      badge: "OpenAP + fallback",
+      description:
+        "Fuel and CO₂ estimation approach used in the final system.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            Environmental performance was estimated using an OpenAP-based fuel
+            modelling approach where aircraft type and trajectory data were
+            compatible with the modelling workflow. OpenAP was used to derive
+            fuel-consumption estimates from reconstructed flight trajectories and
+            aircraft-performance information.
+          </p>
+
+          <p>
+            For flights where OpenAP-based estimation was not sufficient or could
+            not be applied reliably, a fallback proxy method was used. This
+            prevented compatible and incompatible flights from being split into
+            separate datasets and allowed all 407 ESSA arrivals to remain in the
+            dashboard.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <CandidateMetric label="OpenAP estimates" value="319 flights" />
+            <CandidateMetric label="Fallback estimates" value="88 flights" />
+            <CandidateMetric label="Coverage" value="78.4% OpenAP" />
+          </div>
+
+          <p>
+            CO₂ emissions were computed from estimated fuel consumption. In the
+            CDO scenario calculations, fuel saving was converted to CO₂ saving
+            using a factor of 3.16 kg CO₂ per kg of fuel. The resulting values
+            are used for relative comparison, ranking, and scenario evaluation.
+          </p>
+
+          <p className="text-amber-300">
+            These values are research estimates. They do not replace certified
+            airline fuel records, operational flight-planning data, or full
+            aircraft-performance validation.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "analysis",
+      title: "Analytical Framework",
+      badge: "Arrival efficiency",
+      description:
+        "Metrics and evaluation logic used for flight comparison and scenario analysis.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            Arrival efficiency was evaluated using trajectory-derived and
+            flight-level indicators. The dashboard compares arrivals using
+            distance, duration, descent class, level-off count, fuel estimate,
+            CO₂ estimate, environmental-estimation method, and efficiency score.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <CandidateMetric label="Distance" value="Track NM" />
+            <CandidateMetric label="Time" value="Duration min" />
+            <CandidateMetric label="Descent" value="CDO / partial / interrupted" />
+            <CandidateMetric label="Impact" value="Fuel + CO₂" />
+          </div>
+
+          <p>
+            Descent behaviour is analysed using CDO-like, partial-CDO, and
+            interrupted-descent classifications. Level-off count is used as a
+            proxy indicator for descent interruption and potential CDO-style
+            improvement.
+          </p>
+
+          <p>
+            The CDO scenario estimates potential fuel and CO₂ savings if selected
+            level-offs could be reduced. Interrupted descents may reduce up to two
+            level-offs, partial CDO arrivals may reduce up to one level-off, and
+            CDO-like flights are not modified. The scenario is a research
+            screening model, not an operational clearance model.
+          </p>
+
+          <p>
+            The traffic-flow analysis allows flights to be filtered by date, hour
+            block, runway, aircraft type, descent class, and environmental method.
+            This supports analysis of runway usage, descent mix, OpenAP coverage,
+            high-emission flights, and selected-scenario arrival performance.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "architecture",
+      title: "Final System Architecture",
+      badge: "FastAPI + React",
+      description:
+        "How the implemented backend and dashboard support the research workflow.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            The final system follows a data-processing and visualization pipeline:
+            raw ADS-B ingestion, ESSA-arrival filtering, trajectory
+            reconstruction, feature generation, environmental estimation, weather
+            context integration, scenario analysis, backend API delivery, and
+            frontend visualization.
+          </p>
+
+          <ol className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-slate-300">
+            <li>1. SCAT ADS-B data ingestion.</li>
+            <li>2. ESSA arrival-only filtering.</li>
+            <li>3. Flight trajectory reconstruction.</li>
+            <li>4. Flight-level metric generation.</li>
+            <li>5. OpenAP and fallback environmental estimation.</li>
+            <li>6. Weather-context association.</li>
+            <li>7. CDO scenario and sensitivity analysis.</li>
+            <li>8. FastAPI backend endpoints.</li>
+            <li>9. React dashboard visualization.</li>
+            <li>10. LLM-based explanation layer.</li>
+          </ol>
+
+          <p>
+            The dashboard is part of the analytical method, not only a display
+            layer. It enables search, filtering, flight inspection, map-based
+            trajectory review, trajectory/weather interpretation, flight
+            comparison, traffic-flow analysis, optimization candidate review, CDO
+            simulation, sensitivity testing, and AI-assisted explanation.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "llm",
+      title: "LLM Q&A Role and Limitations",
+      badge: "Explanation layer",
+      description:
+        "How the AI assistant should be interpreted in the final dashboard.",
+      content: (
+        <div className="space-y-4 text-sm leading-6 text-slate-300">
+          <p>
+            The LLM Q&A component is implemented as an explanation layer for the
+            research dashboard. It helps users interpret dashboard outputs,
+            summarize results, explain methodological assumptions, and prepare
+            research discussion.
+          </p>
+
+          <p>
+            The assistant uses dashboard context and backend-calculated metrics.
+            It does not generate operational ATC instructions, perform real-time
+            traffic optimization, validate safety-critical procedures, or replace
+            the computed analysis.
+          </p>
+
+          <p className="text-amber-300">
+            Assistant answers should be checked against the dashboard values,
+            source code, dataset description, and documented methodology before
+            being used in formal conclusions.
+          </p>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            Methodology and Research Notes
+          </h2>
+          <p className="text-sm text-slate-400">
+            Final implemented methodology for the 407-flight ESSA arrival analysis dashboard.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
+          Final research documentation
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {sections.map((section) => {
+          const open = section.id === openSection
+
+          return (
+            <div
+              key={section.id}
+              className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950"
+            >
+              <button
+                type="button"
+                onClick={() => setOpenSection(open ? "" : section.id)}
+                className="flex w-full flex-col gap-3 px-4 py-4 text-left transition hover:bg-slate-900/70 md:flex-row md:items-center md:justify-between"
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-medium text-slate-100">
+                      {section.title}
+                    </h3>
+                    <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-400">
+                      {section.badge}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    {section.description}
+                  </p>
+                </div>
+
+                <span className="text-sm text-cyan-300">
+                  {open ? "Hide" : "Open"}
+                </span>
+              </button>
+
+              {open && (
+                <div className="border-t border-slate-800 px-4 py-4">
+                  {section.content}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 function AviationAssistantPanel() {
   const suggestedQuestions = [
-    "Explain the dashboard results in simple terms.",
-    "Explain the CDO sensitivity analysis.",
-    "What are the main environmental impacts?",
-    "What are the main limitations of this prototype?",
-    "Write a supervisor-friendly research summary.",
-    "What optimization opportunities exist in the data?",
+    "Explain the final methodology of this ESSA arrival analysis project.",
+    "Summarize how the 407 ESSA arrival flights were processed.",
+    "Explain how OpenAP and fallback proxy emissions estimates are used.",
+    "Explain the CDO scenario and its assumptions.",
+    "What are the main limitations of this research dashboard?",
+    "Write a supervisor-friendly summary of the final implemented system.",
   ]
 
   const [question, setQuestion] = useState(suggestedQuestions[0])
