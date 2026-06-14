@@ -255,65 +255,24 @@ LLM-Assisted Analytics Assistant
 
 ### Architecture Diagram
 
-A future architecture figure can be added here:
+```mermaid
+flowchart TD
+    A["SCAT ADS-B Dataset<br/>scat20170107_20170113.zip"] --> B["Python Processing Pipeline<br/>ESSA arrival filtering<br/>Trajectory reconstruction<br/>Feature generation"]
 
-```markdown
-![System Architecture](docs/images/system-architecture.png)
+    B --> C["Environmental Modelling<br/>OpenAP fuel and CO₂ estimates<br/>Fallback proxy estimates"]
+
+    C --> D["Processed Data Outputs<br/>Flight summaries<br/>Trajectory points<br/>Weather context<br/>Scenario results"]
+
+    D --> E["FastAPI Backend<br/>Summary API<br/>Flight API<br/>Trajectory API<br/>CDO scenario API<br/>LLM assistant API"]
+
+    E --> F["React + Vite Dashboard<br/>Mission overview<br/>Flight explorer<br/>Trajectory and weather<br/>Traffic flow<br/>Optimization lab"]
+
+    F --> G["LLM Q&A Assistant<br/>Methodology explanation<br/>Dashboard interpretation<br/>Research notes"]
 ```
 
-Recommended diagram content:
+The diagram shows the final implemented workflow from the SCAT ADS-B dataset to the processed backend APIs, interactive dashboard, and LLM-assisted explanation layer.
 
-```text
-SCAT ADS-B Dataset
-→ Python Processing Pipeline
-→ OpenAP + Fallback Environmental Estimation
-→ Processed Flight and Trajectory Outputs
-→ FastAPI Backend
-→ React Dashboard
-→ LLM Q&A Assistant
-```
 
-For now, the implemented pipeline is represented below:
-
-```text
-+-----------------------------+
-| SCAT ADS-B Dataset          |
-| scat20170107_20170113.zip   |
-+-------------+---------------+
-              |
-              v
-+-----------------------------+
-| Data Processing Pipeline    |
-| Filtering, reconstruction,  |
-| feature generation          |
-+-------------+---------------+
-              |
-              v
-+-----------------------------+
-| Environmental Modelling     |
-| OpenAP + fallback proxy     |
-+-------------+---------------+
-              |
-              v
-+-----------------------------+
-| FastAPI Backend             |
-| Summary, flights,           |
-| trajectories, scenarios     |
-+-------------+---------------+
-              |
-              v
-+-----------------------------+
-| React Dashboard             |
-| Map, charts, analytics,     |
-| weather, optimization       |
-+-------------+---------------+
-              |
-              v
-+-----------------------------+
-| LLM Assistant               |
-| Research explanation layer  |
-+-----------------------------+
-```
 
 ---
 
