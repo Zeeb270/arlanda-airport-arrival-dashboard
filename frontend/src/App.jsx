@@ -510,7 +510,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
   return (
     <PageShell>
-      <main className="grid min-h-[calc(100vh-116px)] grid-cols-12 gap-4 p-4">
+      <main className="grid min-h-[calc(100vh-116px)] grid-cols-12 items-start gap-4 p-4">
         
 
         <section className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
@@ -624,219 +624,35 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
         )}
         {activeTab === "flight-explorer" && (
         <>
-        <aside className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">Flight Selector</h2>
-            <p className="text-sm text-slate-400">
-              Search, filter, and select arrivals into Stockholm Arlanda.
-            </p>
-          </div>
-
-          <div className="mb-4 space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">
-                Search flight
-              </label>
-              <input
-                type="text"
-                value={flightSearch}
-                onChange={(event) => setFlightSearch(event.target.value)}
-                placeholder="Callsign, flight ID, aircraft..."
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">Runway</label>
-              <select
-                value={runwayFilter}
-                onChange={(event) => setRunwayFilter(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="ALL">All runways</option>
-                {runwayOptions.map((runway) => (
-                  <option key={runway} value={runway}>
-                    {runway}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">Aircraft type</label>
-              <select
-                value={aircraftFilter}
-                onChange={(event) => setAircraftFilter(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="ALL">All aircraft</option>
-                {aircraftOptions.map((aircraftType) => (
-                  <option key={aircraftType} value={aircraftType}>
-                    {aircraftType}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">Descent class</label>
-              <select
-                value={descentFilter}
-                onChange={(event) => setDescentFilter(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="ALL">All descent classes</option>
-                {descentOptions.map((descentClass) => (
-                  <option key={descentClass} value={descentClass}>
-                    {descentClass}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">
-                Date
-              </label>
-              <select
-                value={dateFilter}
-                onChange={(event) => setDateFilter(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="ALL">All dates</option>
-                {dateOptions.map((date) => (
-                  <option key={date} value={date}>
-                    {date}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">
-                Hour block
-              </label>
-              <select
-                value={hourFilter}
-                onChange={(event) => setHourFilter(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="ALL">All hours</option>
-                {hourOptions.map((hour) => (
-                  <option key={hour} value={hour}>
-                    {hour}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">
-                Environmental method
-              </label>
-              <select
-                value={environmentalMethodFilter}
-                onChange={(event) => setEnvironmentalMethodFilter(event.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="ALL">All methods</option>
-                {environmentalMethodOptions.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
-                <label>Minimum efficiency</label>
-                <span>{minEfficiency}</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={minEfficiency}
-                onChange={(event) => setMinEfficiency(Number(event.target.value))}
-                className="w-full accent-cyan-400"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setRunwayFilter("ALL")
-                setAircraftFilter("ALL")
-                setDescentFilter("ALL")
-                setEnvironmentalMethodFilter("ALL")
-                setDateFilter("ALL")
-                setHourFilter("ALL")
-                setFlightSearch("")
-                setMinEfficiency(0)
-              }}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
-            >
-              Reset filters
-            </button>
-          </div>
-
-          <div className="mb-3 flex items-center justify-between text-xs text-slate-500">
-            <span>
-              Showing {filteredFlights.length} of {flights.length} flights
-            </span>
-            {(flightSearch ||
-              dateFilter !== "ALL" ||
-              hourFilter !== "ALL" ||
-              environmentalMethodFilter !== "ALL" ||
-              runwayFilter !== "ALL" ||
-              aircraftFilter !== "ALL" ||
-              descentFilter !== "ALL" ||
-              minEfficiency > 0) && (
-              <span className="text-cyan-300">filters active</span>
-            )}
-          </div>
-
-          <div className="max-h-[620px] space-y-3 overflow-y-auto pr-1">
-            {filteredFlights.map((flight) => {
-              const selected = flight.flight_id === selectedFlightId
-
-              return (
-                <button
-                  key={flight.flight_id}
-                  onClick={() => setSelectedFlightId(flight.flight_id)}
-                  className={`w-full rounded-xl border px-4 py-3 text-left transition ${
-                    selected
-                      ? "border-cyan-400 bg-cyan-500/10"
-                      : "border-slate-700 bg-slate-800 hover:border-cyan-400 hover:bg-slate-800/80"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-slate-100">
-                      {flight.callsign || flight.flight_id}
-                    </p>
-                    <span className="rounded-full bg-slate-950 px-2 py-1 text-xs text-cyan-300">
-                      {flight.aircraft_type || "N/A"}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
-                    <span>RWY {flight.arrival_runway || "N/A"}</span>
-                    <span>STAR {flight.star || "N/A"}</span>
-                    <span>{flight.descent_class}</span>
-                    <span>{flight.efficiency_score}/100</span>
-                  </div>
-                </button>
-              )
-            })}
-            {filteredFlights.length === 0 && (
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
-                No flights match the selected filters.
-              </div>
-            )}
-          </div>
-        </aside>
-
-        <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-6">
+        <HorizontalFlightSelector
+          flights={flights}
+          filteredFlights={filteredFlights}
+          selectedFlightId={selectedFlightId}
+          setSelectedFlightId={setSelectedFlightId}
+          flightSearch={flightSearch}
+          setFlightSearch={setFlightSearch}
+          runwayFilter={runwayFilter}
+          setRunwayFilter={setRunwayFilter}
+          aircraftFilter={aircraftFilter}
+          setAircraftFilter={setAircraftFilter}
+          descentFilter={descentFilter}
+          setDescentFilter={setDescentFilter}
+          environmentalMethodFilter={environmentalMethodFilter}
+          setEnvironmentalMethodFilter={setEnvironmentalMethodFilter}
+          dateFilter={dateFilter}
+          setDateFilter={setDateFilter}
+          hourFilter={hourFilter}
+          setHourFilter={setHourFilter}
+          minEfficiency={minEfficiency}
+          setMinEfficiency={setMinEfficiency}
+          runwayOptions={runwayOptions}
+          aircraftOptions={aircraftOptions}
+          descentOptions={descentOptions}
+          environmentalMethodOptions={environmentalMethodOptions}
+          dateOptions={dateOptions}
+          hourOptions={hourOptions}
+        />
+        <section className="col-span-12 h-[720px] rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-9">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Live Flight Map</h2>
@@ -861,7 +677,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           </div>
 
           {trajectoryLoading ? (
-            <div className="flex h-[520px] items-center justify-center rounded-xl border border-slate-800 bg-slate-950">
+            <div className="flex h-[630px] items-center justify-center rounded-xl border border-slate-800 bg-slate-950">
               <div className="text-center">
                 <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
                 <p className="text-sm text-slate-400">Loading trajectory...</p>
@@ -876,7 +692,7 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
           )}
         </section>
 
-        <aside className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
+        <aside className="col-span-12 h-[720px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/70 p-4 lg:col-span-3">
           <h2 className="mb-3 text-lg font-semibold">Metrics</h2>
 
           <div className="space-y-3">
@@ -962,33 +778,44 @@ cd backend{"\n"}uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
             </div>
             
           )}
-          {selectedFlight && (
-            <div className="mt-5">
-              <WeatherPanel
-                weather={selectedFlight.weather}
-                runway={selectedFlight.arrival_runway}
-              />
-            </div>
-          )}
+          
         </aside>
           </>
         )}
 
       {activeTab === "trajectory-weather" && (
         <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Trajectory Analytics</h2>
+              <h2 className="text-lg font-semibold">Trajectory & Weather Analysis</h2>
               <p className="text-sm text-slate-400">
-                Altitude, speed, and vertical-rate profiles for the selected arrival.
+                Altitude, speed, vertical-rate, CDO behavior, and surface-weather context for the selected arrival.
               </p>
             </div>
-            <p className="text-sm text-slate-400">
+
+            <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
               Selected flight: {selectedFlight?.callsign || "None"}
-            </p>
+            </span>
           </div>
 
-          <TrajectoryCharts trajectory={selectedTrajectory} />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+            <div className="xl:col-span-3">
+              <TrajectoryCharts trajectory={selectedTrajectory} />
+            </div>
+
+            <div className="xl:col-span-1">
+              {selectedFlight ? (
+                <WeatherPanel
+                  weather={selectedFlight.weather}
+                  runway={selectedFlight.arrival_runway}
+                />
+              ) : (
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+                  Select a flight to view weather context.
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
@@ -1259,89 +1086,103 @@ function CdoSimulationPanel({ data, onSelectFlight }) {
           <p className="mt-2 text-xs leading-5 text-slate-500">
             {method?.description}
           </p>
-
-          <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-              Assumptions
-            </p>
-            <ul className="space-y-1 text-xs leading-5 text-slate-300">
-              {(method?.assumptions || []).map((assumption) => (
-                <li key={assumption}>• {assumption}</li>
-              ))}
-            </ul>
-          </div>
-
           <p className="mt-3 text-xs leading-5 text-amber-300">
             Limitation: {method?.limitations}
           </p>
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-          <h3 className="font-medium text-slate-100">Top CO₂ Saving Flights</h3>
-          <p className="mt-1 text-xs text-slate-500">
-            Flights with the largest estimated saving under the simplified CDO-improvement scenario.
-          </p>
-
-          {topSavings.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">
-              No reducible level-off candidates found.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {topSavings.slice(0, 8).map((flight, index) => (
-                <div
-                  key={flight.flight_id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/70 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-emerald-300">
-                        {index + 1}. {flight.callsign || flight.flight_id}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {flight.aircraft_type || "N/A"} · RWY {flight.arrival_runway || "N/A"} · {flight.descent_class || "N/A"}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500">CO₂ saving</p>
-                      <p className="text-sm font-semibold text-cyan-300">
-                        {Math.round(flight.co2_saving_kg).toLocaleString()} kg
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-                    <CandidateMetric
-                      label="Level-offs cut"
-                      value={flight.reducible_level_offs}
-                    />
-                    <CandidateMetric
-                      label="Fuel saving"
-                      value={`${Math.round(flight.fuel_saving_kg).toLocaleString()} kg`}
-                    />
-                    <CandidateMetric
-                      label="Saving"
-                      value={`${flight.saving_percent}%`}
-                    />
-                    <CandidateMetric
-                      label="Strategy"
-                      value={flight.strategy}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onSelectFlight(flight.flight_id)}
-                    className="mt-3 w-full rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 hover:border-emerald-300 hover:text-emerald-100"
-                  >
-                    Inspect this flight
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <h3 className="font-medium text-slate-100">Assumptions</h3>
+          <ul className="mt-2 grid grid-cols-1 gap-2 text-xs leading-5 text-slate-300 md:grid-cols-2">
+            {(method?.assumptions || []).map((assumption) => (
+              <li
+                key={assumption}
+                className="rounded-lg border border-slate-800 bg-slate-900/70 p-2"
+              >
+                • {assumption}
+              </li>
+            ))}
+          </ul>
         </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="font-medium text-slate-100">
+              Top CO₂ Saving Flights
+            </h3>
+            <p className="text-xs text-slate-500">
+              Flights with the largest estimated saving under the simplified CDO-improvement scenario.
+            </p>
+          </div>
+
+          <span className="text-xs text-slate-500">
+            Scroll horizontally · click to inspect
+          </span>
+        </div>
+
+        {topSavings.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            No reducible level-off candidates found.
+          </p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {topSavings.slice(0, 8).map((flight, index) => (
+              <button
+                key={flight.flight_id}
+                type="button"
+                onClick={() => onSelectFlight(flight.flight_id)}
+                className="min-w-[280px] rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-400/60"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Candidate #{index + 1}
+                    </p>
+                    <h4 className="mt-1 text-lg font-semibold text-emerald-300">
+                      {flight.callsign || flight.flight_id}
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {flight.aircraft_type || "N/A"} · RWY {flight.arrival_runway || "N/A"} · {flight.descent_class || "N/A"}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300">
+                    CO₂
+                  </span>
+                </div>
+
+                <p className="mt-4 text-2xl font-semibold text-cyan-300">
+                  {Math.round(flight.co2_saving_kg).toLocaleString()} kg
+                </p>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                  <CandidateMetric
+                    label="Level-offs cut"
+                    value={flight.reducible_level_offs}
+                  />
+                  <CandidateMetric
+                    label="Fuel saving"
+                    value={`${Math.round(flight.fuel_saving_kg).toLocaleString()} kg`}
+                  />
+                  <CandidateMetric
+                    label="Saving"
+                    value={`${flight.saving_percent}%`}
+                  />
+                  <CandidateMetric
+                    label="Strategy"
+                    value={flight.strategy}
+                  />
+                </div>
+
+                <p className="mt-4 text-xs text-emerald-300">
+                  Inspect this flight
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
@@ -1634,6 +1475,241 @@ function AviationAssistantPanel() {
         </div>
       </div>
     </section>
+  )
+}
+function HorizontalFlightSelector({
+  flights,
+  filteredFlights,
+  selectedFlightId,
+  setSelectedFlightId,
+  flightSearch,
+  setFlightSearch,
+  runwayFilter,
+  setRunwayFilter,
+  aircraftFilter,
+  setAircraftFilter,
+  descentFilter,
+  setDescentFilter,
+  environmentalMethodFilter,
+  setEnvironmentalMethodFilter,
+  dateFilter,
+  setDateFilter,
+  hourFilter,
+  setHourFilter,
+  minEfficiency,
+  setMinEfficiency,
+  runwayOptions,
+  aircraftOptions,
+  descentOptions,
+  environmentalMethodOptions,
+  dateOptions,
+  hourOptions,
+}) {
+  const previewFlights = filteredFlights.slice(0, 10)
+
+  return (
+    <section className="col-span-12 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-100">
+            Flight Selector
+          </h2>
+          <p className="text-sm text-slate-400">
+            Search, filter, and select arrivals. Showing {previewFlights.length} of {filteredFlights.length} matching flights.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300">
+          {flights.length.toLocaleString()} total flights
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+        <div className="2xl:col-span-2">
+          <label className="mb-1 block text-xs text-slate-500">
+            Search flight
+          </label>
+          <input
+            type="text"
+            value={flightSearch}
+            onChange={(event) => setFlightSearch(event.target.value)}
+            placeholder="Callsign, flight ID, aircraft..."
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+          />
+        </div>
+
+        <CompactSelect
+          label="Runway"
+          value={runwayFilter}
+          onChange={setRunwayFilter}
+          defaultLabel="All runways"
+          options={runwayOptions}
+        />
+
+        <CompactSelect
+          label="Aircraft"
+          value={aircraftFilter}
+          onChange={setAircraftFilter}
+          defaultLabel="All aircraft"
+          options={aircraftOptions}
+        />
+
+        <CompactSelect
+          label="Descent"
+          value={descentFilter}
+          onChange={setDescentFilter}
+          defaultLabel="All descents"
+          options={descentOptions}
+        />
+
+        <CompactSelect
+          label="Date"
+          value={dateFilter}
+          onChange={setDateFilter}
+          defaultLabel="All dates"
+          options={dateOptions}
+        />
+
+        <CompactSelect
+          label="Hour"
+          value={hourFilter}
+          onChange={setHourFilter}
+          defaultLabel="All hours"
+          options={hourOptions}
+        />
+
+        <CompactSelect
+          label="Method"
+          value={environmentalMethodFilter}
+          onChange={setEnvironmentalMethodFilter}
+          defaultLabel="All methods"
+          options={environmentalMethodOptions}
+        />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div>
+          <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+            <label>Minimum efficiency</label>
+            <span>{minEfficiency}</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            value={minEfficiency}
+            onChange={(event) => setMinEfficiency(Number(event.target.value))}
+            className="w-full accent-cyan-400"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setRunwayFilter("ALL")
+            setAircraftFilter("ALL")
+            setDescentFilter("ALL")
+            setEnvironmentalMethodFilter("ALL")
+            setDateFilter("ALL")
+            setHourFilter("ALL")
+            setFlightSearch("")
+            setMinEfficiency(0)
+          }}
+          className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
+        >
+          Reset filters
+        </button>
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className="text-xs uppercase tracking-wide text-slate-500">
+            Top matching flights
+          </p>
+          <p className="text-xs text-slate-500">
+            Scroll horizontally · click a card to inspect
+          </p>
+        </div>
+
+        {previewFlights.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+            No flights match the selected filters.
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {previewFlights.map((flight) => {
+              const selected = flight.flight_id === selectedFlightId
+
+              return (
+                <button
+                  key={flight.flight_id}
+                  type="button"
+                  onClick={() => setSelectedFlightId(flight.flight_id)}
+                  className={`min-w-[240px] rounded-xl border px-4 py-3 text-left transition hover:-translate-y-0.5 ${
+                    selected
+                      ? "border-cyan-400 bg-cyan-500/10"
+                      : "border-slate-700 bg-slate-950 hover:border-cyan-400 hover:bg-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate font-medium text-slate-100">
+                      {flight.callsign || flight.flight_id}
+                    </p>
+                    <span className="rounded-full bg-slate-900 px-2 py-1 text-xs text-cyan-300">
+                      {flight.aircraft_type || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400">
+                    <span>RWY {flight.arrival_runway || "N/A"}</span>
+                    <span>STAR {flight.star || "N/A"}</span>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span
+                      className={`rounded-full px-2 py-1 text-[11px] ${
+                        flight.descent_class === "CDO-like"
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : flight.descent_class === "Interrupted descent"
+                            ? "bg-rose-500/10 text-rose-300"
+                            : "bg-amber-500/10 text-amber-300"
+                      }`}
+                    >
+                      {flight.descent_class || "N/A"}
+                    </span>
+
+                    <span className="text-xs text-slate-500">
+                      Score {flight.efficiency_score ?? "N/A"}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function CompactSelect({ label, value, onChange, defaultLabel, options }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs text-slate-500">{label}</label>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+      >
+        <option value="ALL">{defaultLabel}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }
 
