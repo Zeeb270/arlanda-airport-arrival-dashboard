@@ -411,7 +411,7 @@ Includes:
 
 ## Dashboard Screenshots
 
-The dashboard is organized into six research workspaces. Add final screenshots after deployment.
+The dashboard is organized into six research workspaces.
 
 ### Mission Overview
 
@@ -437,16 +437,6 @@ The dashboard is organized into six research workspaces. Add final screenshots a
 
 ![Research and LLM Q&A](docs/images/research-llm-qa.png)
 
-Recommended screenshot files:
-
-```text
-docs/images/mission-overview.png
-docs/images/flight-explorer.png
-docs/images/trajectory-weather.png
-docs/images/traffic-flow.png
-docs/images/optimization-lab.png
-docs/images/research-llm-qa.png
-```
 
 ---
 
