@@ -466,3 +466,361 @@ docs/images/research-llm-qa.png
 | LLM assistant | Groq API with Llama model |
 | Frontend deployment | Vercel |
 | Backend deployment | Render |
+
+---
+
+## Repository Structure
+
+The repository is organized as a full-stack aviation research dashboard.
+
+```text
+arlanda-airport-arrival-dashboard/
+│
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   └── ...
+│   ├── data/
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
+│
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── ...
+│
+├── docs/
+│   └── images/
+│
+├── README.md
+└── ...
+```
+
+The exact folder contents may vary depending on local data availability and deployment configuration.
+
+---
+
+## Installation and Setup
+
+### Prerequisites
+
+Install the following:
+
+- Python 3.10 or newer
+- Node.js 18 or newer
+- npm
+- Git
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Zeeb270/arlanda-airport-arrival-dashboard.git
+cd arlanda-airport-arrival-dashboard
+```
+
+---
+
+## Running the Project
+
+### Backend
+
+From the repository root:
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The backend should be available at:
+
+```text
+http://localhost:8000
+```
+
+### Frontend
+
+Open a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+The frontend should be available through the Vite development server.
+
+### Build Frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+---
+
+## Environment Variables
+
+### Frontend
+
+For deployment:
+
+```text
+VITE_API_BASE_URL=https://arlanda-arrival-api.onrender.com
+```
+
+For local development:
+
+```text
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### Backend LLM Assistant
+
+```text
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.1-8b-instant
+```
+
+The LLM assistant is optional for dashboard data visualization, but required for natural-language Q&A.
+
+---
+
+## Deployment
+
+Final deployment links:
+
+| Service | Platform | URL |
+|---|---|---|
+| Frontend | Vercel | https://arlanda-airport-arrival-dashboard.vercel.app/ |
+| Backend | Render | https://arlanda-arrival-api.onrender.com |
+
+---
+## Data Processing Pipeline
+
+The implemented processing pipeline converts ADS-B records into dashboard-ready aviation analytics.
+
+```text
+1. Download SCAT ADS-B dataset
+2. Extract scat20170107_20170113.zip
+3. Load raw trajectory records
+4. Filter ESSA arrival flights
+5. Exclude departure flights
+6. Group records by flight identifier
+7. Sort trajectory points by timestamp
+8. Reconstruct arrival trajectories
+9. Compute flight distance and duration
+10. Detect descent and level-off behaviour
+11. Estimate fuel consumption
+12. Estimate CO₂ emissions
+13. Attach weather context
+14. Generate dashboard datasets
+15. Serve analytics through FastAPI
+```
+
+Generated indicators include:
+
+- callsign,
+- aircraft type,
+- origin,
+- destination,
+- runway,
+- STAR or route label,
+- trajectory distance,
+- arrival duration,
+- descent class,
+- level-off count,
+- fuel estimate,
+- CO₂ estimate,
+- environmental-estimation method,
+- efficiency score.
+
+---
+
+## Environmental Modelling
+
+### OpenAP-Based Estimation
+
+The project uses [OpenAP](https://openap.dev/) for aircraft performance and environmental estimation where compatible trajectory and aircraft-type information is available.
+
+OpenAP is used to estimate:
+
+- fuel consumption,
+- CO₂ emissions.
+
+In simple terms, OpenAP helps estimate how much fuel an aircraft may burn based on aircraft type and flight behaviour. The dashboard uses these estimates to compare arrival flights and identify environmentally significant patterns.
+
+### Fallback Proxy Estimation
+
+OpenAP cannot always be applied to every flight. Some flights may have incomplete information, unsupported aircraft types, or trajectory limitations. To avoid removing these flights from the analysis, the project uses fallback proxy estimation.
+
+This approach keeps the full 407-flight dataset in the dashboard while clearly distinguishing between:
+
+- OpenAP-based estimates,
+- fallback proxy estimates.
+
+### CO₂ Conversion
+
+For scenario analysis, estimated fuel saving is converted into CO₂ saving using:
+
+```text
+CO₂ saving = fuel saving × 3.16
+```
+
+This conversion is used for comparative research analysis and simplified CDO scenario evaluation.
+
+---
+
+## Key Results and Dataset Statistics
+
+The current implemented dataset contains:
+
+| Metric | Value |
+|---|---:|
+| Arrival flights | 407 |
+| Trajectory points | 201,950 |
+| OpenAP estimates | 319 |
+| Fallback estimates | 88 |
+| Weather records | 192 |
+| OpenAP coverage | 78.4% |
+| Total final fuel estimate | 523,516.32 kg |
+| Total final CO₂ estimate | 1,654,311.44 kg |
+| Average efficiency score | 76.04 |
+
+The CDO-style scenario analysis estimates potential improvement for flights with reducible level-offs. These values are research estimates and depend on simplified assumptions.
+
+---
+## Research Contributions
+
+This project contributes an applied aviation analytics workflow for arrival-performance research.
+
+Main contributions:
+
+1. A complete ADS-B processing pipeline for ESSA arrival flights.
+2. A final filtered dataset of 407 Stockholm Arlanda arrival flights.
+3. Flight-level trajectory reconstruction and operational metric generation.
+4. OpenAP-based fuel and CO₂ estimation with fallback proxy handling.
+5. Interactive visualization of arrival trajectories and flight profiles.
+6. Weather-context integration for selected arrivals.
+7. Runway and arrival-flow scenario analysis.
+8. CDO-style improvement and sensitivity simulation.
+9. LLM-assisted explanation of aviation analytics results.
+10. A deployed full-stack research dashboard suitable for portfolio and research review.
+
+---
+
+## Limitations
+
+This project is a research prototype. The following limitations apply:
+
+- The dataset contains 407 processed ESSA arrival flights, not all possible airport operations.
+- The analysis is based on ADS-B data and derived indicators.
+- Aircraft mass, airline operational fuel data, and detailed clearance information are not available.
+- OpenAP estimates depend on aircraft type and trajectory compatibility.
+- Fallback proxy estimates are approximate.
+- Weather information is used as contextual surface-weather data.
+- Wind aloft and full atmospheric modelling are not included.
+- The CDO scenario does not model separation minima, controller workload, runway capacity, pilot instructions, or full aircraft energy management.
+- The LLM assistant explains dashboard results but does not produce operational aviation instructions.
+
+---
+
+## Future Work
+
+Potential future extensions include:
+
+- expanding the dataset to additional days or airports,
+- validating emissions estimates against more detailed fuel-burn models,
+- improving weather integration with wind-aloft data,
+- adding aircraft mass estimation,
+- modelling arrival sequencing constraints,
+- adding runway-capacity and separation constraints,
+- comparing conventional arrivals with published CDO procedures,
+- adding controller workload indicators if suitable data becomes available,
+- improving the LLM assistant with retrieval over project documentation,
+- and packaging the processing pipeline for reproducible research.
+
+---
+
+## References
+
+- SCAT ADS-B Dataset, Mendeley Data:  
+  https://data.mendeley.com/datasets/8yn985bwz5/1
+
+- OpenAP Aircraft Performance Model:  
+  https://openap.dev/
+
+- Stockholm Arlanda Airport / ESSA information:  
+  https://www.swedavia.com/arlanda/
+
+- OpenStreetMap:  
+  https://www.openstreetmap.org/
+
+- FastAPI:  
+  https://fastapi.tiangolo.com/
+
+- React:  
+  https://react.dev/
+
+---
+
+## Citation
+
+If you use this repository, dashboard, or methodology in academic or research work, please cite the repository and the original dataset.
+
+Suggested repository citation:
+
+```text
+Bukhari, S. M. Z. (2026). LLM-Assisted Stockholm Arlanda Arrival Optimization Dashboard:
+ADS-B Trajectory Analysis, Environmental Modelling, and ATM Research Visualization.
+GitHub repository: https://github.com/Zeeb270/arlanda-airport-arrival-dashboard
+```
+
+Suggested dataset citation:
+
+```text
+SCAT ADS-B Dataset, Mendeley Data.
+Available at: https://data.mendeley.com/datasets/8yn985bwz5/1
+```
+
+---
+
+## Acknowledgements
+
+This project uses real ADS-B trajectory data from the SCAT dataset and environmental modelling concepts supported by OpenAP. The dashboard also uses open-source web technologies including FastAPI, React, Vite, Leaflet, OpenStreetMap, and Recharts.
+
+The project was developed as an aviation analytics portfolio project focused on air traffic management, environmental performance, and interactive research visualization.
+
+---
+
+## License
+
+This repository is released under the MIT License.
+
+The MIT License applies to the source code in this repository. Dataset usage remains subject to the terms and citation requirements of the original dataset provider. Users are responsible for checking the license and citation requirements of the SCAT ADS-B dataset before redistributing or reusing the data.
+
+```text
+MIT License
+
+Copyright (c) 2026 Syed Muhammad Zeeshan Bukhari
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files, to deal in the Software
+without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the
+Software, subject to the conditions of the MIT License.
+```
+
+---
+
+## Disclaimer
+
+This project is for research, education, and portfolio demonstration only. It is not certified for operational aviation use and must not be used for real-time air traffic control, flight planning, aircraft separation, safety-critical decision-making, or regulatory compliance.
