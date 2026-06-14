@@ -23,17 +23,23 @@ Link to live Dashboard: https://arlanda-airport-arrival-dashboard.vercel.app/
 
 - [Project Overview](#project-overview)
 - [Research Motivation](#research-motivation)
+- [Research Questions](#research-questions)
 - [Research Objectives](#research-objectives)
 - [Dataset Description](#dataset-description)
 - [Methodology Overview](#methodology-overview)
+- [Key Assumptions](#key-assumptions)
 - [System Architecture](#system-architecture)
 - [Dashboard Features](#dashboard-features)
+- [Dashboard Screenshots](#dashboard-screenshots)
 - [Technology Stack](#technology-stack)
 - [Repository Structure](#repository-structure)
 - [Installation and Setup](#installation-and-setup)
 - [Running the Project](#running-the-project)
-- [Data Processing Pipeline](#data-processing-pipeline)
+- [Environment Variables](#environment-variables)
+- [Deployment](#deployment)
+- [Implemented Data Processing Pipeline](#implemented-data-processing-pipeline)
 - [Environmental Modelling](#environmental-modelling)
+- [Optimization and CDO Scenario Formulation](#optimization-and-cdo-scenario-formulation)
 - [Key Results and Dataset Statistics](#key-results-and-dataset-statistics)
 - [Research Contributions](#research-contributions)
 - [Limitations](#limitations)
@@ -42,7 +48,7 @@ Link to live Dashboard: https://arlanda-airport-arrival-dashboard.vercel.app/
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
-
+- [Disclaimer](#disclaimer)
 ---
 
 ## Project Overview
@@ -83,6 +89,19 @@ This project uses real ADS-B arrival data to investigate:
 
 The dashboard provides an applied research environment where these factors can be inspected interactively.
 
+---
+
+## Research Questions
+
+This project is guided by the following research questions:
+
+1. How can ADS-B trajectory data be used to reconstruct and compare arrival operations at Stockholm Arlanda Airport?
+2. Which trajectory-derived indicators can be used to identify inefficient arrival behaviour?
+3. How can OpenAP-based and fallback environmental estimates support comparative fuel and CO₂ analysis?
+4. What potential fuel and CO₂ savings are suggested by a simplified CDO-style level-off reduction scenario?
+5. How can an interactive dashboard and LLM-assisted explanation layer support aviation analytics interpretation?
+
+These questions frame the project as an exploratory aviation analytics study rather than an operational air traffic control optimization system.
 ---
 
 ## Research Objectives
@@ -182,42 +201,58 @@ Nilsson, Jens; Unger, Jonas (2022), “SCAT dataset”, Mendeley Data, V1, doi: 
 
 ## Methodology Overview
 
-The project follows a complete data-to-dashboard research pipeline.
+The project follows a data-to-dashboard research workflow for analysing ESSA arrival operations from ADS-B trajectory data.
 
-Main stages:
+The methodology consists of the following stages:
 
 1. **Data ingestion**  
-   Load the SCAT ADS-B dataset file `scat20170107_20170113.zip`.
+   The SCAT ADS-B dataset file `scat20170107_20170113.zip` is loaded and prepared for processing.
 
-2. **Flight filtering**  
-   Retain only flights arriving at Stockholm Arlanda Airport (ESSA).
+2. **Arrival filtering**  
+   Flights associated with Stockholm Arlanda Airport are filtered to retain ESSA arrival movements only.
 
 3. **Departure exclusion**  
-   Remove departure flights because the project focuses only on arrival procedures, descent behaviour, runway-arrival flow, and terminal-area environmental performance.
+   Departure flights are excluded because the project focuses on arrival procedures, descent behaviour, runway-arrival flow, and terminal-area environmental performance.
 
 4. **Trajectory reconstruction**  
-   Group ADS-B records by flight identifier and sort trajectory points chronologically to reconstruct each arrival path.
+   ADS-B records are grouped by flight identifier and sorted chronologically to reconstruct each arrival trajectory.
 
-5. **Feature generation**  
-   Compute flight-level indicators such as aircraft type, arrival runway, STAR or route label, track distance, duration, descent class, level-off count, fuel estimate, CO₂ estimate, and efficiency score.
+5. **Operational feature generation**  
+   Flight-level indicators are generated, including aircraft type, arrival runway, route or STAR label where available, track distance, arrival duration, descent class, level-off count, and efficiency score.
 
-6. **Environmental modelling**  
-   Apply OpenAP-based fuel and CO₂ estimation where aircraft and trajectory data are compatible.
+6. **Environmental estimation**  
+   Fuel consumption is estimated using OpenAP where compatible aircraft and trajectory data are available. Fallback proxy estimation is used where OpenAP cannot be applied.
 
-7. **Fallback estimation**  
-   Apply fallback proxy estimation where OpenAP modelling is incomplete or unavailable, allowing all 407 arrival flights to remain in the analysis.
+7. **Weather-context integration**  
+   Surface weather context is attached where available, including temperature, pressure, wind speed, wind direction, cloud cover, and runway-relative wind components.
 
-8. **Weather integration**  
-   Attach surface weather context to selected flights where available, including temperature, pressure, wind speed, wind direction, cloud cover, and runway-relative wind components.
+8. **Scenario analysis**  
+   A simplified CDO-style scenario evaluates potential fuel and CO₂ savings from reducing selected level-off behaviour under clearly stated assumptions.
 
-9. **Scenario analysis**  
-   Estimate simplified CDO-style improvement potential by evaluating selected level-off reduction assumptions and their possible fuel and CO₂ effects.
+9. **Dashboard implementation**  
+   Processed outputs are served through a FastAPI backend and visualized in a React dashboard with maps, charts, filters, traffic-flow analysis, optimization panels, and methodology notes.
 
-10. **Dashboard visualization**  
-    Present processed results through an interactive React dashboard with map, charts, filters, flight comparison, traffic-flow analysis, optimization panels, and methodology notes.
+10. **LLM-assisted interpretation**  
+    The LLM Q&A assistant provides natural-language explanation of dashboard outputs, methodology, and limitations. It does not generate operational aviation instructions.
 
-11. **LLM explanation layer**  
-    Provide natural-language explanations of dashboard outputs, assumptions, limitations, and research methodology through the LLM Q&A assistant.
+Descent behaviour is classified using trajectory-derived indicators such as altitude evolution, vertical-rate patterns, and detected level-off behaviour. Level-off count is used as a proxy indicator for interrupted descent behaviour rather than as direct evidence of ATC instructions.
+
+---
+
+## Key Assumptions
+
+The project is based on the following assumptions:
+
+- ADS-B trajectory data is sufficient for reconstructing and comparing arrival paths at a research-prototype level.
+- Arrival inefficiency can be approximated using trajectory-derived indicators such as track distance, duration, descent class, and level-off count.
+- Level-off count is used as a proxy indicator for interrupted descent behaviour.
+- OpenAP-based fuel estimation is used where aircraft type and trajectory information are compatible.
+- Fallback proxy estimation is used only when OpenAP modelling is incomplete or unavailable.
+- CO₂ emissions are estimated from fuel consumption using a standard fuel-to-CO₂ conversion factor.
+- Surface weather is used as contextual information and does not represent full atmospheric or wind-aloft modelling.
+- The CDO-style scenario is a simplified research screening model, not a certified operational optimization tool.
+- The dashboard supports exploratory analysis and interpretation, not real-time air traffic control decision-making.
+- The LLM assistant explains dashboard outputs and methodology but does not generate operational aviation instructions.
 ---
 
 ## System Architecture
@@ -263,25 +298,25 @@ The diagram shows the final implemented workflow from the SCAT ADS-B dataset to 
 
 ## Dashboard Features
 
-The dashboard is divided into six research workspaces.
+The dashboard is organized into six research workspaces.
 
 ### 1. Mission Overview
 
-Provides a high-level summary of the dataset and key research indicators.
+Provides a high-level summary of the processed dataset and key research indicators.
 
 Includes:
 
-- number of flights,
+- number of processed arrival flights,
 - trajectory point count,
 - average efficiency score,
-- total fuel estimate,
-- total CO₂ estimate,
+- total estimated fuel consumption,
+- total estimated CO₂ emissions,
 - OpenAP coverage,
 - research prototype status.
 
 ### 2. Flight Explorer
 
-Allows interactive flight-level inspection.
+Supports flight-level inspection and comparison.
 
 Features:
 
@@ -294,20 +329,20 @@ Features:
 
 ### 3. Trajectory & Weather
 
-Displays detailed flight-profile analysis for the selected arrival.
+Displays trajectory profiles and contextual surface-weather information for the selected arrival.
 
 Includes:
 
 - altitude profile,
 - speed profile,
 - vertical-rate profile,
-- CDO and level-off context,
+- descent and level-off context,
 - surface weather metrics,
 - runway-relative wind component information.
 
 ### 4. Traffic Flow
 
-Supports operational scenario filtering.
+Supports scenario-based inspection of arrival-flow patterns.
 
 Users can filter by:
 
@@ -318,28 +353,28 @@ Users can filter by:
 The tab summarizes:
 
 - runway mix,
-- descent mix,
-- OpenAP/fallback mix,
-- total fuel,
-- total CO₂,
+- descent-class mix,
+- OpenAP and fallback estimation mix,
+- total estimated fuel consumption,
+- total estimated CO₂ emissions,
 - high-emission flights,
 - selected-scenario arrival performance.
 
 ### 5. Optimization Lab
 
-Provides research-oriented optimization analysis.
+Provides research-oriented CDO scenario analysis and candidate screening.
 
 Includes:
 
 - optimization candidate ranking,
-- simplified CDO improvement scenario,
+- simplified CDO-style level-off reduction scenario,
 - CDO sensitivity analysis.
 
-The CDO scenario estimates potential fuel and CO₂ savings if selected level-offs could be reduced under simplified research assumptions.
+The CDO scenario estimates potential fuel and CO₂ savings if selected level-off behaviour is reduced under simplified assumptions. It should be interpreted as an exploratory research-screening tool, not as an operational trajectory optimizer.
 
 ### 6. Research & LLM Q&A
 
-Provides final methodology documentation and an LLM-assisted explanation layer.
+Provides methodology documentation and an LLM-assisted explanation layer.
 
 Includes:
 
@@ -348,8 +383,10 @@ Includes:
 - environmental modelling notes,
 - analytical framework,
 - system architecture,
-- AI assistant limitations,
+- assistant limitations,
 - natural-language dashboard Q&A.
+
+The LLM assistant is used to explain dashboard outputs and methodology. It does not generate real-time aviation instructions or certified operational recommendations.
 
 ---
 
@@ -538,84 +575,224 @@ Final deployment links:
 | Backend | Render | https://arlanda-arrival-api.onrender.com |
 
 ---
-## Data Processing Pipeline
+## Implemented Data Processing Pipeline
 
-The implemented processing pipeline converts ADS-B records into dashboard-ready aviation analytics.
+The implemented processing pipeline converts ADS-B trajectory records into dashboard-ready aviation analytics.
 
 ```text
-1. Download SCAT ADS-B dataset
-2. Extract scat20170107_20170113.zip
-3. Load raw trajectory records
-4. Filter ESSA arrival flights
-5. Exclude departure flights
+1. Load SCAT ADS-B dataset
+2. Extract trajectory records from scat20170107_20170113.zip
+3. Filter flights associated with Stockholm Arlanda Airport
+4. Retain arrival flights only
+5. Exclude departure movements
 6. Group records by flight identifier
 7. Sort trajectory points by timestamp
 8. Reconstruct arrival trajectories
-9. Compute flight distance and duration
-10. Detect descent and level-off behaviour
+9. Compute trajectory distance and arrival duration
+10. Detect descent behaviour and level-off patterns
 11. Estimate fuel consumption
 12. Estimate CO₂ emissions
-13. Attach weather context
-14. Generate dashboard datasets
-15. Serve analytics through FastAPI
+13. Attach available weather context
+14. Generate processed dashboard datasets
+15. Serve analytics through the FastAPI backend
 ```
 
-Generated indicators include:
+Generated flight-level indicators include:
 
 - callsign,
 - aircraft type,
 - origin,
 - destination,
-- runway,
-- STAR or route label,
+- arrival runway,
+- route or STAR label where available,
 - trajectory distance,
 - arrival duration,
 - descent class,
 - level-off count,
-- fuel estimate,
-- CO₂ estimate,
+- estimated fuel consumption,
+- estimated CO₂ emissions,
 - environmental-estimation method,
 - efficiency score.
+
+Large raw data files may not be tracked directly in the repository and may need to be downloaded from the original SCAT dataset source.
 
 ---
 
 ## Environmental Modelling
 
-### OpenAP-Based Estimation
+The project estimates environmental performance at flight level using a two-stage approach: OpenAP-based fuel estimation where compatible data is available, and fallback proxy estimation where OpenAP cannot be applied.
 
-The project uses [OpenAP](https://openap.dev/) for aircraft performance and environmental estimation where compatible trajectory and aircraft-type information is available.
+### OpenAP-Based Fuel Estimation
 
-OpenAP is used to estimate:
+[OpenAP](https://openap.dev/) is used to estimate aircraft fuel consumption where aircraft type and trajectory information are compatible with the model.
 
-- fuel consumption,
-- CO₂ emissions.
+In this project, OpenAP-based estimation is used for flights with sufficient aircraft and trajectory information. The resulting fuel estimates are used for comparative analysis between arrival flights, runway flows, descent classes, and CDO-style scenario candidates.
 
-In simple terms, OpenAP helps estimate how much fuel an aircraft may burn based on aircraft type and flight behaviour. The dashboard uses these estimates to compare arrival flights and identify environmentally significant patterns.
+OpenAP estimates should be interpreted as model-based research estimates, not certified airline fuel-burn records.
+
+### CO₂ Emissions Estimation
+
+CO₂ emissions are estimated from fuel consumption using a standard fuel-to-CO₂ conversion factor:
+
+```math
+e_i = 3.16 \cdot f_i
+```
+
+where:
+
+- \(e_i\) is the estimated CO₂ emissions for flight \(i\),
+- \(f_i\) is the estimated fuel consumption for flight \(i\),
+- 3.16 is the approximate kilograms of CO₂ produced per kilogram of jet fuel burned.
+
+This conversion is used consistently for both baseline emissions and CDO-style scenario savings.
 
 ### Fallback Proxy Estimation
 
-OpenAP cannot always be applied to every flight. Some flights may have incomplete information, unsupported aircraft types, or trajectory limitations. To avoid removing these flights from the analysis, the project uses fallback proxy estimation.
+OpenAP cannot always be applied to every flight. Some flights may have incomplete information, unsupported aircraft types, or trajectory limitations. To avoid excluding these flights from the dashboard, the project applies fallback proxy estimation.
 
-This approach keeps the full 407-flight dataset in the dashboard while clearly distinguishing between:
+Fallback estimates are used only when OpenAP-based modelling is incomplete or unavailable. They allow the full 407-flight dataset to remain visible while clearly distinguishing between:
 
 - OpenAP-based estimates,
 - fallback proxy estimates.
 
-### CO₂ Conversion
+Fallback values should be interpreted as approximate comparative indicators rather than high-fidelity fuel-burn estimates.
 
-For scenario analysis, estimated fuel saving is converted into CO₂ saving using:
+### Interpretation of Environmental Results
 
-```text
-CO₂ saving = fuel saving × 3.16
+Environmental values in this project are intended for exploratory comparison and scenario analysis. They support questions such as:
+
+- which flights show higher estimated fuel or CO₂ values,
+- how emissions vary across runway flows and descent classes,
+- which arrivals appear as candidates for simplified CDO-style improvement,
+- how sensitive scenario savings are to assumed fuel-saving parameters.
+
+The estimates are not intended for regulatory emissions reporting, certified airline fuel accounting, or operational flight planning.
+
+---
+
+## Optimization and CDO Scenario Formulation
+
+The optimization component in this project is implemented as a simplified research screening framework. It does not solve a certified operational trajectory optimization problem. Instead, it estimates the potential environmental benefit of reducing selected level-off segments in arrival trajectories.
+
+Let \(F\) be the set of processed ESSA arrival flights. For each flight \(i \in F\), the dashboard computes:
+
+- \(d_i\): trajectory distance,
+- \(t_i\): arrival duration,
+- \(L_i\): number of detected level-offs,
+- \(f_i\): estimated fuel consumption,
+- \(e_i\): estimated CO₂ emissions,
+- \(s_i\): efficiency score.
+
+### Objective
+
+The simplified objective is to estimate the potential reduction in total arrival fuel consumption and CO₂ emissions.
+
+The baseline total fuel consumption is:
+
+```math
+F_{\text{base}} = \sum_{i \in F} f_i
 ```
 
-This conversion is used for comparative research analysis and simplified CDO scenario evaluation.
+The baseline total CO₂ emissions are:
 
+```math
+E_{\text{base}} = \sum_{i \in F} e_i
+```
+
+After applying the simplified CDO-style improvement scenario, the estimated post-scenario values are:
+
+```math
+F_{\text{scenario}} = \sum_{i \in F} (f_i - \Delta f_i)
+```
+
+```math
+E_{\text{scenario}} = \sum_{i \in F} (e_i - \Delta e_i)
+```
+
+The scenario therefore evaluates:
+
+```math
+\min E_{\text{scenario}}
+```
+
+subject to the simplified assumption that only selected reducible level-offs are modified.
+
+### Reducible Level-Off Assumption
+
+For each flight \(i\), let \(r_i\) represent the number of reducible level-offs:
+
+```math
+r_i =
+\begin{cases}
+\min(L_i, 2), & \text{if flight } i \text{ is classified as interrupted descent} \\
+\min(L_i, 1), & \text{if flight } i \text{ is classified as partial CDO} \\
+0, & \text{if flight } i \text{ is classified as CDO-like}
+\end{cases}
+```
+
+This means that flights with stronger interruption patterns are assumed to have greater potential for improvement, while CDO-like flights are not modified.
+
+### Fuel-Saving Estimate
+
+The estimated fuel saving for flight \(i\) is:
+
+```math
+\Delta f_i = f_i \cdot \min(\alpha r_i, \beta)
+```
+
+where:
+
+- \(\Delta f_i\) is the estimated fuel saving for flight \(i\),
+- \(\alpha\) is the assumed fuel-saving percentage per reduced level-off,
+- \(r_i\) is the number of reducible level-offs,
+- \(\beta\) is the maximum fuel-saving cap per flight.
+
+### CO₂-Saving Estimate
+
+Estimated CO₂ saving is calculated from fuel saving using the fuel-to-CO₂ conversion factor:
+
+```math
+\Delta e_i = 3.16 \cdot \Delta f_i
+```
+
+The aggregate CO₂ saving is:
+
+```math
+\Delta E = \sum_{i \in F} \Delta e_i
+```
+
+### Evaluation Metrics
+
+The scenario is evaluated using:
+
+- total estimated fuel saving,
+- total estimated CO₂ saving,
+- percentage reduction relative to baseline fuel,
+- percentage reduction relative to baseline CO₂,
+- number of affected candidate flights,
+- sensitivity of savings to different \(\alpha\) and \(\beta\) assumptions.
+
+### Operational Constraints
+
+The current implementation acknowledges important ATM constraints but does not explicitly optimize them. These include:
+
+- aircraft separation minima,
+- runway capacity,
+- arrival sequencing order,
+- ATC clearances,
+- controller workload,
+- pilot and airline operating procedures,
+- aircraft mass and energy state,
+- wind aloft and full atmospheric conditions.
+
+Therefore, the CDO scenario should be interpreted as a research-oriented environmental screening model, not as an operational arrival-management solution.
+
+---
 ---
 
 ## Key Results and Dataset Statistics
 
-The current implemented dataset contains:
+The current processed dataset contains:
 
 | Metric | Value |
 |---|---:|
@@ -625,12 +802,13 @@ The current implemented dataset contains:
 | Fallback estimates | 88 |
 | Weather records | 192 |
 | OpenAP coverage | 78.4% |
-| Total final fuel estimate | 523,516.32 kg |
-| Total final CO₂ estimate | 1,654,311.44 kg |
+| Total estimated fuel consumption | 523,516.32 kg |
+| Total estimated CO₂ emissions | 1,654,311.44 kg |
 | Average efficiency score | 76.04 |
 
-The CDO-style scenario analysis estimates potential improvement for flights with reducible level-offs. These values are research estimates and depend on simplified assumptions.
+The CDO-style scenario analysis estimates potential improvement for flights with reducible level-off behaviour. These values are research estimates and depend on simplified assumptions, including the assumed fuel-saving percentage per reduced level-off and the maximum saving cap per flight.
 
+These results should be interpreted as comparative research indicators rather than certified operational or regulatory emissions values.
 ---
 ## Research Contributions
 
@@ -655,15 +833,19 @@ Main contributions:
 
 This project is a research prototype. The following limitations apply:
 
-- The dataset contains 407 processed ESSA arrival flights, not all possible airport operations.
-- The analysis is based on ADS-B data and derived indicators.
-- Aircraft mass, airline operational fuel data, and detailed clearance information are not available.
+- The dataset contains 407 processed ESSA arrival flights and does not represent all possible Stockholm Arlanda operations.
+- The analysis is based on ADS-B trajectory data and derived indicators.
+- ADS-B data does not include ATC instructions, controller intent, pilot intent, or airline operating decisions.
+- Trajectory inefficiency is inferred from observed flight behaviour rather than confirmed operational causes.
+- Aircraft mass, airline operational fuel data, and detailed flight-management-system data are not available.
 - OpenAP estimates depend on aircraft type and trajectory compatibility.
-- Fallback proxy estimates are approximate.
+- Fallback proxy estimates are approximate and are used only where OpenAP-based modelling is unavailable.
 - Weather information is used as contextual surface-weather data.
 - Wind aloft and full atmospheric modelling are not included.
-- The CDO scenario does not model separation minima, controller workload, runway capacity, pilot instructions, or full aircraft energy management.
-- The LLM assistant explains dashboard results but does not produce operational aviation instructions.
+- The CDO scenario does not model separation minima, controller workload, runway capacity, pilot instructions, sequencing constraints, or full aircraft energy management.
+- The LLM assistant explains dashboard results and methodology but does not produce operational aviation instructions.
+
+These limitations mean that the results should be interpreted as exploratory research indicators rather than certified operational, regulatory, or safety-critical outputs.
 
 ---
 
@@ -671,16 +853,18 @@ This project is a research prototype. The following limitations apply:
 
 Potential future extensions include:
 
-- expanding the dataset to additional days or airports,
-- validating emissions estimates against more detailed fuel-burn models,
-- improving weather integration with wind-aloft data,
-- adding aircraft mass estimation,
-- modelling arrival sequencing constraints,
-- adding runway-capacity and separation constraints,
-- comparing conventional arrivals with published CDO procedures,
-- adding controller workload indicators if suitable data becomes available,
-- improving the LLM assistant with retrieval over project documentation,
-- and packaging the processing pipeline for reproducible research.
+- expanding the analysis to additional days, seasons, and airports,
+- validating fuel and emissions estimates against higher-fidelity performance models or operational fuel records,
+- improving weather integration with wind-aloft and atmospheric profile data,
+- adding aircraft mass or weight-class estimation,
+- modelling arrival sequencing and runway-capacity constraints,
+- incorporating aircraft separation and terminal-area flow constraints,
+- comparing observed arrivals with published CDO or arrival procedure benchmarks,
+- adding controller workload indicators if suitable operational or simulation data becomes available,
+- improving the LLM assistant with retrieval over project documentation and methodological notes,
+- packaging the processing workflow for reproducible research.
+
+Future work should focus on moving from exploratory trajectory analytics toward more formal ATM performance modelling while preserving clear separation from operational decision-support use.
 
 ---
 
@@ -737,24 +921,17 @@ The project was developed as an aviation analytics portfolio project focused on 
 
 ## License
 
-This repository is released under the MIT License.
+This repository is released under the MIT License. See [LICENSE](LICENSE).
 
-The MIT License applies to the source code in this repository. Dataset usage remains subject to the terms and citation requirements of the original dataset provider. Users are responsible for checking the license and citation requirements of the SCAT ADS-B dataset before redistributing or reusing the data.
+The MIT License applies to the source code in this repository. Dataset usage remains subject to the terms and citation requirements of the original SCAT ADS-B dataset provider. Users are responsible for checking the license and citation requirements of the SCAT ADS-B dataset before redistributing or reusing the data.
 
-```text
-MIT License
-
-Copyright (c) 2026 Syed Muhammad Zeeshan Bukhari
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files, to deal in the Software
-without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense, and/or sell copies of the
-Software, subject to the conditions of the MIT License.
-```
 
 ---
 
 ## Disclaimer
 
-This project is for research, education, and portfolio demonstration only. It is not certified for operational aviation use and must not be used for real-time air traffic control, flight planning, aircraft separation, safety-critical decision-making, or regulatory compliance.
+This project is for research, education, and portfolio demonstration only.
+
+It is not certified for operational aviation use and must not be used for real-time air traffic control, flight planning, aircraft separation, safety-critical decision-making, regulatory compliance, or certified emissions reporting.
+
+The dashboard, environmental estimates, CDO scenario outputs, and LLM-generated explanations should be interpreted as exploratory research outputs only.
