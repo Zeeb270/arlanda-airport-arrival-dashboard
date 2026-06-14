@@ -15,6 +15,8 @@ The project investigates how aircraft arrival trajectories can be analysed to su
 
 This repository is designed as a serious aviation analytics portfolio project for review by aviation researchers, air traffic management specialists, environmental analysts, software engineers, and future contributors.
 
+Link to live Dashboard: https://arlanda-airport-arrival-dashboard.vercel.app/
+
 ---
 
 ## Table of Contents
